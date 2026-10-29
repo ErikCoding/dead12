@@ -45,9 +45,9 @@ export function seedDB() {
     orders: [],
     discounts: [
       { code: 'ZZAGROBU', type: 'percent', value: 15, minOrder: 0, limit: 0, used: 0, mode: 'all', expires: null, active: true, note: 'kod startowy drop 01' },
-      { code: 'BUSINESS12', type: 'amount', value: 40, minOrder: 200, limit: 0, used: 0, mode: 'on', expires: null, active: true, note: 'tylko strefa ON' },
+      { code: 'BUSINESS12', type: 'amount', value: 40, minOrder: 200, limit: 0, used: 0, mode: 'all', expires: null, active: true, note: '−40 zł od 200 zł' },
       { code: 'DARMOWATRUMNA', type: 'ship', value: 0, minOrder: 0, limit: 0, used: 0, mode: 'all', expires: null, active: true, note: 'darmowa dostawa' },
-      { code: 'ZOMBIE10', type: 'percent', value: 10, minOrder: 0, limit: 100, used: 0, mode: 'ona', expires: null, active: true, note: 'tylko strefa ONA, 100 użyć' },
+      { code: 'ZOMBIE10', type: 'percent', value: 10, minOrder: 0, limit: 100, used: 0, mode: 'all', expires: null, active: true, note: '100 użyć' },
     ],
     settings: structuredClone(DEFAULT_SETTINGS),
   };
@@ -71,7 +71,6 @@ export function findDiscount(db, code, { subtotal = 0, mode = 'ona', now = Date.
   if (!d || !d.active) return { ok: false, error: 'nie ma takiego kodu' };
   if (d.expires && new Date(d.expires).getTime() < now) return { ok: false, error: 'kod wygasł' };
   if (d.limit && d.used >= d.limit) return { ok: false, error: 'limit użyć wyczerpany' };
-  if (d.mode !== 'all' && d.mode !== mode) return { ok: false, error: d.mode === 'on' ? 'kod działa tylko w strefie ON' : 'kod działa tylko w strefie ONA' };
   if (subtotal < (d.minOrder || 0)) return { ok: false, error: `minimalna kwota zamówienia: ${d.minOrder} zł` };
   return { ok: true, discount: d };
 }

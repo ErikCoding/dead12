@@ -58,7 +58,7 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
     $('#cartUnits').textContent = count() ? `(${count()})` : '';
     if (!state.items.length) {
       list.innerHTML = `<li class="cart-empty">${m === 'ona'
-        ? '<img src="assets/img/skull-white.png" alt="">pusto jak w trumnie po zmartwychwstaniu.<a href="#ona-shop" data-cclose>zajrzyj do katalogu →</a>'
+        ? '<img src="assets/img/skull-white.png" alt="">pusto jak w trumnie po zmartwychwstaniu.<a href="#kolekcja" data-cclose>zobacz kolekcję →</a>'
         : '<img src="assets/img/skull.png" alt="">brak otwartych pozycji.<a href="#on-market" data-cclose>przejdź na parkiet →</a>'}</li>`;
     } else {
       list.innerHTML = state.items.map((l) => {
@@ -90,7 +90,7 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
       $('#shipBar').style.width = (q.freeShip ? 100 : pct) + '%';
       meter.classList.toggle('full', q.freeShip);
       $('#shipMsg').innerHTML = q.freeShip
-        ? (m === 'ona' ? '♥ darmowa dostawa odblokowana' : 'próg darmowej dostawy osiągnięty ✓')
+        ? (m === 'ona' ? 'darmowa dostawa odblokowana ✓' : 'próg darmowej dostawy osiągnięty ✓')
         : (m === 'ona' ? `do darmowej dostawy brakuje <b>${fmt(q.freeShipLeft)}</b>` : `do progu darmowej dostawy: <b>${fmt(q.freeShipLeft)}</b>`);
     }
 
@@ -119,8 +119,8 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
     if (!t || !t.lines.length) return '';
     const m = mode();
     let shipTxt;
-    if (withShip && co.ship) shipTxt = t.shipping === 0 ? (m === 'ona' ? 'gratis ♥' : '0,00 PLN') : fmt(t.shipping);
-    else shipTxt = t.freeShip ? (m === 'ona' ? 'gratis ♥' : 'gratis') : 'od ' + fmt(t.shippingFrom);
+    if (withShip && co.ship) shipTxt = t.shipping === 0 ? (m === 'ona' ? 'gratis' : '0,00 PLN') : fmt(t.shipping);
+    else shipTxt = t.freeShip ? (m === 'ona' ? 'gratis' : 'gratis') : 'od ' + fmt(t.shippingFrom);
     return `
       <div><dt>${m === 'ona' ? 'produkty' : 'wartość walorów'}</dt><dd>${fmt(t.subtotal)}</dd></div>
       ${t.discountAmt ? `<div class="disc"><dt>rabat ${esc(t.discount.code)}</dt><dd>−${fmt(t.discountAmt)}</dd></div>` : ''}
@@ -133,9 +133,9 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
   /* ---------- drawer events ---------- */
   function openCart(v = true) {
     const c = $('#cart'); c.classList.toggle('open', v); c.setAttribute('aria-hidden', String(!v));
-    document.body.classList.toggle('lock', v);
+    document.body.classList.toggle('lock', v); document.documentElement.classList.toggle('lock', v || !document.getElementById('tryon')?.hidden);
     if (v) document.getElementById('toast')?.classList.remove('show');
-    if (v) { refresh(); setTimeout(() => $('.cart-panel .x').focus({ preventScroll: true }), 50); }
+    if (v) { refresh(); if (matchMedia('(pointer:fine)').matches) setTimeout(() => $('.cart-panel .x').focus({ preventScroll: true }), 50); }
   }
   $('#cartBtn').addEventListener('click', () => openCart(true));
   $('#cart').addEventListener('click', (e) => { if (e.target.closest('[data-cclose]')) openCart(false); });
@@ -172,7 +172,7 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
     const b = e.target.closest('[data-up]'); if (!b) return;
     const p = byId()[b.dataset.up];
     if (p.sizes) { openCart(false); window.dispatchEvent(new CustomEvent('d12:open', { detail: p.id })); }
-    else { add(p.id, null); toast(mode() === 'ona' ? `♥ ${p.ona.name} dorzucone` : `dokupiono ${p.on.ticker}`); }
+    else { add(p.id, null); toast(mode() === 'ona' ? `${p.ona.name} dorzucone` : `dokupiono ${p.on.ticker}`); }
   });
 
   $('#codeForm').addEventListener('submit', async (e) => {
@@ -211,12 +211,12 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
     co.open = true; co.step = 1;
     fillCustomer(); renderOpts();
     $('#checkout').hidden = false; $('#coDone').hidden = true; $('.co-body').hidden = false; $('.co-shell').classList.remove('is-done');
-    document.body.classList.add('lock');
+    document.body.classList.add('lock'); document.documentElement.classList.add('lock');
     goStep(1);
     refresh();
   }
   function closeCheckout() {
-    co.open = false; $('#checkout').hidden = true; document.body.classList.remove('lock');
+    co.open = false; $('#checkout').hidden = true; if (document.getElementById('tryon')?.hidden !== false) { document.body.classList.remove('lock'); document.documentElement.classList.remove('lock'); }
   }
   $('#checkoutBtn').addEventListener('click', openCheckout);
   $('#coClose').addEventListener('click', closeCheckout);
@@ -284,11 +284,11 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
       check('city', f.city.value.trim().length >= 2, 'miasto');
     }
     if (n === 2) {
-      if (!co.ship) { ok = false; toast(mode() === 'ona' ? 'wybierz dostawę ♥' : 'wybierz metodę dostawy'); }
+      if (!co.ship) { ok = false; toast('wybierz dostawę'); }
       else if (S().shipping.find((x) => x.id === co.ship)?.locker) check('locker', /^[A-Z]{3}\d{2,3}[A-Z]{0,2}$/.test(f.locker.value), 'np. GDY01M');
     }
     if (n === 3) {
-      if (!co.pay) { ok = false; toast(mode() === 'ona' ? 'wybierz płatność ♥' : 'wybierz instrument płatniczy'); }
+      if (!co.pay) { ok = false; toast('wybierz płatność'); }
       $('#termsErr').textContent = f.terms.checked ? '' : 'zaakceptuj regulamin';
       if (!f.terms.checked) ok = false;
     }
@@ -310,7 +310,7 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
     $('#coSideTotal').textContent = fmt(q.total);
     $$('[data-ship-price]').forEach((el) => {
       const o = S().shipping.find((x) => x.id === el.dataset.shipPrice);
-      el.textContent = q.freeShip && !o.noFree ? (m === 'ona' ? 'gratis ♥' : 'gratis') : fmt(o.price);
+      el.textContent = q.freeShip && !o.noFree ? (m === 'ona' ? 'gratis' : 'gratis') : fmt(o.price);
     });
     const pt = $('#payTotal'); if (pt) pt.textContent = fmt(q.total);
   }
@@ -319,7 +319,7 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
     const f = form.elements, m = mode(), s = S();
     const ship = s.shipping.find((x) => x.id === co.ship), pay = s.payments.find((x) => x.id === co.pay);
     $('#review').innerHTML = `
-      <div><h5>${m === 'ona' ? 'odbiorczyni / odbiorca' : 'kontrahent'}</h5><p>${esc(f.name.value)}<br>${esc(f.street.value)}<br>${esc(f.zip.value)} ${esc(f.city.value)}<br>${esc(f.email.value)} · ${esc(f.phone.value)}</p><button type="button" data-go-step="1">zmień</button></div>
+      <div><h5>${m === 'ona' ? 'odbiorca' : 'kontrahent'}</h5><p>${esc(f.name.value)}<br>${esc(f.street.value)}<br>${esc(f.zip.value)} ${esc(f.city.value)}<br>${esc(f.email.value)} · ${esc(f.phone.value)}</p><button type="button" data-go-step="1">zmień</button></div>
       <div><h5>dostawa</h5><p>${esc(ship?.name[m])} · ${esc(ship?.eta)}${ship?.locker ? `<br>paczkomat <b>${esc(f.locker.value)}</b>` : ''}${f.note.value ? `<br><i>„${esc(f.note.value)}”</i>` : ''}</p><button type="button" data-go-step="2">zmień</button></div>
       <div><h5>płatność</h5><p>${esc(pay?.name[m])}</p><button type="button" data-go-step="3">zmień</button></div>`;
   }
@@ -344,7 +344,7 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
     const o = r.order, m = mode();
     $('#doneNo').textContent = o.id;
     const payLine = o.status === 'paid'
-      ? (m === 'ona' ? 'opłacone ♥ pakujemy do różowej trumny.' : 'płatność zaksięgowana. przygotowujemy wysyłkę.')
+      ? (m === 'ona' ? 'opłacone. pakujemy do czarnego pudełka z czaszką.' : 'płatność zaksięgowana. przygotowujemy wysyłkę.')
       : o.payment.id === 'transfer' ? `przelej ${fmt(o.totals.total)} — dane do przelewu wysłaliśmy na ${esc(o.email || f.email.value)} (tytuł: ${o.id}).`
         : (m === 'ona' ? 'zapłacisz kurierowi przy odbiorze.' : 'płatność przy odbiorze przesyłki.');
     $('#doneMsg').innerHTML = payLine;
@@ -361,5 +361,5 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
   window.addEventListener('d12:mode', () => { renderOpts(); refresh(); if (co.open) goStep(co.step); });
 
   refresh();
-  return { add, open: openCart, refresh, count, isOpen: () => co.open };
+  return { add, open: openCart, checkout: openCheckout, refresh, count, isOpen: () => co.open };
 }

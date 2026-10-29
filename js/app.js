@@ -1,413 +1,323 @@
-// dead12 — sklep. Tryby ONA / ON, koszyk, modal produktu, efekty.
-import { PRODUCTS as SEED, LOCKED, INDICES } from './products.js';
+// dead12 — sklep (jedna, neutralna strona nastawiona na sprzedaż).
+import { PRODUCTS as SEED, LOCKED } from './products.js';
 import * as api from './api.js';
 import { initCart } from './cart.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const html = document.documentElement;
-const store = {
-  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } },
-};
-// catalog comes from the API (prices, stock, active products); seed is the offline fallback
-let CATALOG = { products: SEED.map((p) => ({ ...p, stock: p.sizes ? Object.fromEntries(p.sizes.map((x) => [x, 9])) : { one: 99 } })), settings: { freeShipFrom: 300, shipping: [], payments: [], lowStock: 3 } };
-let PRODUCTS = CATALOG.products;
-let byId = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmt = (n, m = mode()) => m === 'on'
-  ? n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PLN'
-  : n.toLocaleString('pl-PL', { maximumFractionDigits: 2 }) + ' zł';
-const totalStock = (p) => Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
-const lowStock = () => CATALOG.settings.lowStock || 3;
-const mode = () => html.dataset.mode;
+const fmt = (n) => (+n).toLocaleString('pl-PL', { maximumFractionDigits: 2 }) + ' zł';
+const MODE = 'ona'; // one storefront; kept for the order/stats format
+const seedById = Object.fromEntries(SEED.map((p) => [p.id, p]));
+
+/* ============ catalog ============ */
+const withSeed = (p) => ({ ...p, garment: p.garment || seedById[p.id]?.garment || null, model: p.model || seedById[p.id]?.model || null });
+let CATALOG = {
+  products: SEED.map((p) => withSeed({ ...p, stock: p.sizes ? Object.fromEntries(p.sizes.map((x) => [x, 9])) : { one: 99 } })),
+  settings: { freeShipFrom: 300, shipping: [], payments: [], lowStock: 3 },
+};
+const P = () => CATALOG.products;
+const byId = (id) => P().find((p) => p.id === id);
+const wearables = () => P().filter((p) => p.garment);
+const total = (p) => Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
+const low = () => CATALOG.settings.lowStock || 3;
+
+const lock = (v) => { document.documentElement.classList.toggle('lock', v); document.body.classList.toggle('lock', v); };
 
 /* ============ toast ============ */
 let toastT, toastFn = null;
 function toast(msg, action) {
   const t = $('#toast'), b = $('#toastAct');
-  $('#toastTxt').textContent = msg;
-  toastFn = action?.fn || null; b.hidden = !action; if (action) b.textContent = action.label;
-  t.classList.add('show');
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), action ? 5000 : 2600);
+  $('#toastTxt').textContent = msg; toastFn = action?.fn || null; b.hidden = !action; if (action) b.textContent = action.label;
+  t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), action ? 4500 : 2400);
 }
 $('#toastAct').addEventListener('click', () => { toastFn && toastFn(); toastFn = null; $('#toast').classList.remove('show'); });
 
-/* ============ render: ONA blisters ============ */
-function renderOna() {
-  const wrap = $('#onaProducts');
-  wrap.innerHTML = PRODUCTS.map((p) => {
-    const left = totalStock(p), out = left <= 0;
-    const badge = out ? '<span class="bl-badge out">wyprzedane</span>' : left <= lowStock() * 2 ? `<span class="bl-badge">ostatnie ${left} szt.</span>` : '';
-    return `
-    <article class="blister ${out ? 'sold' : ''}" data-open="${esc(p.id)}" tabindex="0" aria-label="${esc(p.ona.name)}, ${fmt(p.price, 'ona')}">
-      <div class="bl-brand"><img src="assets/img/logo-dark.png" alt=""><span class="pix">${esc((p.ona.kicker || '').split('·')[0])}</span></div>
-      <h3 class="bl-name">${esc(p.ona.name)}</h3>
-      <div class="bl-win"><img src="${esc(p.img)}" alt="${esc(p.ona.name)}" loading="lazy">${badge}</div>
-      <div class="bl-price">${p.compareAt ? `<s>${p.compareAt}</s>` : ''}${p.price}<small>zł</small></div>
-      <div class="bl-foot">
-        <p class="bl-note">${esc(p.ona.note)}</p>
-        <button class="bl-open" data-open="${esc(p.id)}">${out ? 'zobacz' : 'rozpakuj'}</button>
+/* ============ cart ============ */
+const cart = initCart({ getMode: () => MODE, fmt, toast, catalog: () => CATALOG });
+
+/* ============ 3D try-on ============ */
+let viewer = null;
+const pdp = { id: null, size: null };
+async function bootViewer() {
+  const { createViewer } = await import('./viewer.js');
+  viewer = createViewer($('#viewer'), {
+    onProgress: (f) => ($('#loadPct').style.width = Math.round(f * 100) + '%'),
+    onReady: () => { $('#loadPct').style.width = '100%'; },
+  });
+  await viewer.ready;
+  const cur = byId(pdp.id);
+  if (cur?.garment) await viewer.wear(cur);
+  $('#stageLoad').classList.add('done');
+}
+let viewerBoot = null;
+function bootViewerSafe() {
+  if (viewerBoot) return viewerBoot;
+  viewerBoot = bootViewer().catch((e) => {
+    console.warn('3D niedostępne', e);
+    // fallback: show the product photo in the stage
+    $('#stage').classList.add('no3d');
+    $('#stageLoad').innerHTML = `<img src="${esc(byId(pdp.id)?.img)}" alt="" style="max-height:80%;max-width:80%">`;
+  });
+  return viewerBoot;
+}
+
+/* ============ try-on overlay ============ */
+const tryon = $('#tryon');
+function openTryon(id) {
+  const p = byId(id) || byId(pdp.id) || wearables()[0]; if (!p) return;
+  if (!p.garment) return openProduct(p.id);
+  tryon.hidden = false; lock(true);
+  requestAnimationFrame(() => tryon.classList.add('open'));
+  selectProduct(p.id);
+  $('#tryonBody').scrollTop = 0;
+  bootViewerSafe(); viewer?.setActive(true);
+  try { history.replaceState(null, '', '#' + p.id); } catch { /* */ }
+}
+function closeTryon() {
+  if (tryon.hidden) return;
+  tryon.classList.remove('open'); viewer?.setActive(false);
+  setTimeout(() => { tryon.hidden = true; }, 320);
+  lock(false); $('#sbar').classList.remove('show');
+  try { history.replaceState(null, '', location.pathname); } catch { /* */ }
+}
+$('#tryClose').addEventListener('click', closeTryon);
+document.addEventListener('click', (e) => { const t = e.target.closest('[data-tryon]'); if (t) { e.preventDefault(); openTryon(t.dataset.tryon || pdp.id); } });
+$('#viewer').addEventListener('pointerdown', () => $('#stageHint').classList.add('gone'), { once: true });
+$('.stage-ctl').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || !viewer) return;
+  if (b.dataset.view) { viewer.view(b.dataset.view); $$('.stage-ctl [data-view]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }
+  if (b.hasAttribute('data-zoom')) { const z = viewer.zoom(b.getAttribute('aria-pressed') !== 'true'); b.setAttribute('aria-pressed', String(!!z)); }
+  $('#stageHint').classList.add('gone');
+});
+
+/* ============ PDP (buy box) ============ */
+function selectProduct(id, { scroll = false } = {}) {
+  const p = byId(id); if (!p) return;
+  pdp.id = id;
+  if (pdp.size && !(p.stock?.[pdp.size] > 0)) pdp.size = null;
+  renderPdp();
+  if (viewer && p.garment) viewer.wear(p);
+  if (scroll) openTryon(id);
+  else if (!tryon.hidden) try { history.replaceState(null, '', '#' + id); } catch { /* */ }
+}
+function renderPdp() {
+  const p = byId(pdp.id); if (!p) return;
+  const [kind, ...rest] = (p.ona.kicker || '').split('·');
+  $('#pName').textContent = p.ona.name;
+  $('#pSub').textContent = kind.trim();
+  $('#pPrice').textContent = fmt(p.price);
+  $('#pWas').textContent = p.compareAt ? fmt(p.compareAt) : '';
+  const fs = CATALOG.settings.freeShipFrom;
+  $('#pShip').textContent = p.price >= fs ? '· darmowa dostawa' : `· darmowa dostawa od ${fmt(fs)}`;
+  $('#pDesc').textContent = p.ona.desc;
+  if ($('#pickName')) $('#pickName').textContent = rest.join('·').trim();
+  if ($('#swatches')) $('#swatches').innerHTML = wearables().map((w) => `
+    <button class="sw" role="radio" aria-checked="${w.id === p.id}" data-pick="${esc(w.id)}" aria-label="${esc(w.ona.name)}" title="${esc(w.ona.name)}">
+      <img src="${esc(w.img)}" alt="" loading="lazy"></button>`).join('');
+  if (!p.sizes) pdp.size = (p.stock?.one ?? 0) > 0 ? 'one' : null;
+  $('#sizes').innerHTML = (p.sizes || ['one']).map((s) => {
+    const left = p.stock?.[s] ?? 0;
+    return `<button role="radio" aria-checked="${pdp.size === s}" data-size="${s}" ${left <= 0 ? 'disabled aria-disabled="true"' : ''}>${s === 'one' ? 'one size' : s}${left > 0 && left <= low() ? `<i>${left}</i>` : ''}</button>`;
+  }).join('');
+  updateBuy();
+  $('#sbImg').src = p.img; $('#sbName').textContent = p.ona.name; $('#sbPrice').textContent = fmt(p.price);
+}
+function updateBuy() {
+  const p = byId(pdp.id), sold = total(p) <= 0, btn = $('#addBtn');
+  btn.disabled = sold; btn.classList.remove('ok');
+  btn.textContent = sold ? 'wyprzedane' : pdp.size ? `dodaj do koszyka · ${fmt(p.price)}` : 'wybierz rozmiar';
+  $('#nowBtn').disabled = sold;
+  const left = pdp.size ? p.stock?.[pdp.size] ?? 0 : null;
+  $('#stock').textContent = sold ? 'wyprzedane — zapisz się na drop 02 niżej'
+    : left != null && left <= low() ? `zostało tylko ${left} szt. ${pdp.size === 'one' ? 'w magazynie' : 'w rozmiarze ' + pdp.size}` : '';
+  $('#sbAdd').textContent = sold ? 'wyprzedane' : pdp.size ? 'do koszyka' : 'wybierz rozmiar';
+}
+$('#swatches')?.addEventListener('click', (e) => { const b = e.target.closest('[data-pick]'); if (b) selectProduct(b.dataset.pick); });
+$('#sizes').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-size]'); if (!b || b.disabled) return;
+  pdp.size = b.dataset.size;
+  $$('#sizes button').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+  updateBuy();
+});
+function addCurrent() {
+  const p = byId(pdp.id);
+  if (!pdp.size) {
+    $('#sizes').animate([{ transform: 'none' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 300 });
+    toast('najpierw wybierz rozmiar');
+    $('#sizes').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  }
+  cart.add(p.id, pdp.size === 'one' ? null : pdp.size);
+  const btn = $('#addBtn'); btn.classList.add('ok'); btn.textContent = 'dodano ✓';
+  setTimeout(updateBuy, 1600);
+  toast(`${p.ona.name}${pdp.size !== 'one' ? ' · ' + pdp.size : ''} w koszyku`, { label: 'zobacz koszyk', fn: () => cart.open(true) });
+  return true;
+}
+$('#addBtn').addEventListener('click', addCurrent);
+$('#sbAdd').addEventListener('click', addCurrent);
+$('#nowBtn').addEventListener('click', () => { if (addCurrent()) setTimeout(() => cart.checkout(), 250); });
+
+// sticky buy bar (mobile): visible once the main button scrolled away
+const sbar = $('#sbar');
+new IntersectionObserver(([en]) => {
+  const on = !en.isIntersecting && en.boundingClientRect.top < 0;
+  sbar.classList.toggle('show', on); sbar.setAttribute('aria-hidden', String(!on));
+}, { threshold: 0 }).observe($('#addBtn'));
+
+/* ============ drop 01: products in boxes ============ */
+let boxesApi = null, boxesBuilt = '';
+async function renderBoxes() {
+  const list = P(), sig = list.map((p) => p.id + total(p) + p.price).join('|');
+  if (sig === boxesBuilt) return; boxesBuilt = sig;
+  const wrap = $('#boxes');
+  const FRAME = 'M30 0H70L100 37L81 160H19L0 37ZM33.5 9H66.5L91 39.5L75 151H25L9 39.5Z';
+  const SOLID = 'M30 0H70L100 37L81 160H19L0 37Z';
+  const rings = (d) => Array.from({ length: 9 }, (_, k) => `<svg class="cf-ring" style="--k:${k + 1}" viewBox="0 0 100 160" preserveAspectRatio="none" aria-hidden="true"><path fill-rule="evenodd" d="${d}" fill="${['#2b2129', '#271e26', '#241b23', '#211920', '#1e171d', '#1b151a', '#181317', '#151114', '#120f11'][k]}"/></svg>`).join('');
+  const frontSvg = (d, win = true) => `<svg class="cf-frame" viewBox="0 0 100 160" preserveAspectRatio="none" aria-hidden="true">
+      <path fill-rule="evenodd" d="${d}" fill="url(#cfLac)" stroke="rgba(236,230,225,.22)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+      ${win ? '<path d="M33.5 9H66.5L91 39.5L75 151H25L9 39.5Z" fill="none" stroke="#ff2e88" stroke-width="1.5" vector-effect="non-scaling-stroke"/>' : ''}</svg>`;
+  const defs = `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+      <linearGradient id="cfLac" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a3039"/><stop offset=".28" stop-color="#151116"/><stop offset=".55" stop-color="#231c24"/><stop offset=".62" stop-color="#3b313b"/><stop offset=".7" stop-color="#141015"/><stop offset="1" stop-color="#0c0a0d"/></linearGradient></defs></svg>`;
+  wrap.innerHTML = defs + list.map((p, i) => {
+    const left = total(p), sold = left <= 0;
+    const [kind] = (p.ona.kicker || '').split('·');
+    const flag = sold ? '<span class="bx-flag out">wyprzedane</span>' : left <= low() * 2 ? `<span class="bx-flag hot">ostatnie ${left}</span>` : '';
+    return `<article class="box rv ${sold ? 'sold' : ''}" style="--d:${i * 90}ms" data-box="${esc(p.id)}">
+      <div class="cf-stage">
+        <div class="cf">
+          <div class="cf-back" aria-hidden="true"></div>
+          <div class="cf-win">
+            <canvas aria-label="${esc(p.ona.name)} — przeciągnij, aby obrócić${p.garment ? ', kliknij, aby przymierzyć' : ''}"></canvas>
+            <img class="bx-fallback" src="${esc(p.img)}" alt="" loading="lazy">
+          </div>
+          ${rings(FRAME)}
+          <div class="cf-lid" aria-hidden="true">${frontSvg(FRAME)}<span class="cf-glass"></span><img class="cf-skl" src="assets/img/skull-white.png" alt=""></div>
+          ${flag}
+        </div>
+        <div class="cf-shadow" aria-hidden="true"></div>
       </div>
-    </article>`; }).join('') + `
-    <article class="blister locked" aria-label="Drop 02 — wkrótce">
-      <div class="locked-in">
-        <img src="assets/img/skull-white.png" alt="" style="width:70px">
-        <span class="fraktur">${LOCKED.ona.title}</span>
-        <span class="pix">${LOCKED.ona.label}</span>
-        <span class="cd" data-countdown="${LOCKED.ona.date}">--:--:--</span>
+      <div class="cf-plate"><span class="pix">drop 01 · nr ${String(i + 1).padStart(3, '0')}/120 · ${esc(kind.trim())}</span><b>${esc(p.ona.name)}</b></div>
+      <div class="bx-actions">
+        <div class="bx-price">${p.compareAt ? `<s>${fmt(p.compareAt)}</s>` : ''}${fmt(p.price)}</div>
+        ${p.garment ? `<button class="bx-btn pri" data-tryon="${esc(p.id)}">przymierz na lalce</button>`
+          : `<button class="bx-btn pri" data-quickadd="${esc(p.id)}" ${sold ? 'disabled' : ''}>+ do koszyka</button>`}
+        <button class="bx-btn" data-quick="${esc(p.id)}" aria-label="szczegóły">i</button>
       </div>
     </article>`;
-
-  // tilt + cellophane glare
-  if (matchMedia('(hover:hover)').matches) $$('.blister:not(.locked)', wrap).forEach((el) => {
-    el.addEventListener('pointermove', (e) => {
-      const r = el.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-      el.classList.add('tilting');
-      el.style.setProperty('--ry', `${(x - 0.5) * 16}deg`);
-      el.style.setProperty('--rx', `${(0.5 - y) * 12}deg`);
-      el.style.setProperty('--sx', `${x * 100}%`);
+  }).join('') + `
+    <article class="box sealed rv" style="--d:${list.length * 90}ms" aria-label="Drop 02 — wkrótce">
+      <div class="cf-stage"><div class="cf">
+        ${rings(SOLID)}
+        <div class="cf-lid">${frontSvg(SOLID, false)}
+          <div class="seal-in"><img src="assets/img/skull-white.png" alt=""><span class="frak">${esc(LOCKED.ona.title)}</span><b data-countdown="${LOCKED.ona.date}">—</b></div>
+          <span class="tape-x" aria-hidden="true">nie otwierać ✶ nie otwierać ✶ nie otwierać</span>
+        </div>
+      </div><div class="cf-shadow" aria-hidden="true"></div></div>
+      <div class="cf-plate"><span class="pix">drop 02 · zaplombowane · lista 24 h wcześniej</span><b>wkrótce</b></div>
+      <div class="bx-actions"><div class="bx-price">13.12</div><a class="bx-btn pri" href="#drop02">zapisz mnie</a></div>
+    </article>`;
+  // tilt the coffin towards the pointer
+  if (matchMedia('(hover:hover)').matches) $$('.cf-stage', wrap).forEach((st) => {
+    st.addEventListener('pointermove', (e) => {
+      const r = st.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+      st.style.setProperty('--ry', `${-12 + x * 22}deg`); st.style.setProperty('--rx', `${3 - y * 10}deg`);
     });
-    el.addEventListener('pointerleave', () => {
-      el.classList.remove('tilting'); el.style.removeProperty('--rx'); el.style.removeProperty('--ry');
-    });
+    st.addEventListener('pointerleave', () => { st.style.removeProperty('--ry'); st.style.removeProperty('--rx'); });
   });
+  reveal();
+  try {
+    if (!boxesApi) { const { createBoxes } = await import('./boxes.js'); boxesApi = createBoxes({ onOpen: (id) => { const p = byId(id); p?.garment ? openTryon(id) : openProduct(id); } }); }
+    $$('.box[data-box]', wrap).forEach((el) => boxesApi.add(el, byId(el.dataset.box)));
+  } catch (e) { console.warn('3D w pudełkach niedostępne', e); wrap.classList.add('no3d'); }
 }
+$('#boxes').addEventListener('click', (e) => {
+  const q = e.target.closest('[data-quick]'), a = e.target.closest('[data-quickadd]');
+  if (q) return openProduct(q.dataset.quick);
+  if (a) { const p = byId(a.dataset.quickadd); cart.add(p.id, null); toast(`${p.ona.name} w koszyku`, { label: 'zobacz koszyk', fn: () => cart.open(true) }); }
+});
 
-/* ============ render: ON exchange ============ */
-function sparkPath(seed, up, w = 200, h = 54) {
-  let v = 0.5, pts = [];
-  const rnd = mulberry(seed);
-  for (let i = 0; i < 30; i++) {
-    v += (rnd() - 0.5) * 0.18 + (up ? 0.012 : -0.012);
-    v = Math.max(0.05, Math.min(0.95, v));
-    pts.push([i / 29 * w, h - v * h]);
-  }
-  const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
-  return { d, area: d + ` L ${w} ${h} L 0 ${h} Z` };
-}
-function mulberry(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+/* ============ scroll reveal ============ */
+const rvIO = new IntersectionObserver((ens) => ens.forEach((en) => { if (en.isIntersecting) { const el = en.target; el.classList.add('in'); rvIO.unobserve(el); setTimeout(() => el.classList.remove('rv', 'in'), 1400); } }), { threshold: 0.12 });
+function reveal() { $$('.rv:not(.in)').forEach((el) => rvIO.observe(el)); }
 
-function renderOn() {
-  const wrap = $('#onProducts');
-  wrap.innerHTML = `
-    <div class="ex-head" role="row"><span>#</span><span>ticker</span><span>walor</span><span>nazwa</span><span class="h-spark">30 dni</span><span style="text-align:right">kurs</span><span style="text-align:right">zmiana</span><span></span></div>` +
-    PRODUCTS.map((p, i) => {
-      const sp = sparkPath(i * 97 + 12, p.on.chg > 0);
-      const cls = p.on.chg > 0 ? 'up' : 'dn';
-      const left = totalStock(p), out = left <= 0;
-      return `
-      <div class="ex-row ${out ? 'sold' : ''}" role="row" tabindex="0" data-open="${esc(p.id)}" aria-label="${esc(p.on.name)}, ${fmt(p.price, 'on')}">
-        <span class="ex-n mono">0${i + 1}</span>
-        <span class="ex-t">${esc(p.on.ticker)}${out ? '<small class="ex-halt">zawieszony</small>' : left <= lowStock() * 2 ? `<small class="ex-halt low">wolumen: ${left}</small>` : ''}</span>
-        <img class="ex-img" src="${esc(p.img)}" alt="${esc(p.on.name)}" loading="lazy">
-        <span class="ex-name">${esc(p.on.name)}<em>${esc(p.on.sub)}</em></span>
-        <svg class="ex-spark ${cls}" viewBox="0 0 200 54" preserveAspectRatio="none"><path class="area" d="${sp.area}"/><path d="${sp.d}"/></svg>
-        <span class="ex-price">${p.compareAt ? `<s>${fmt(p.compareAt, 'on')}</s>` : ''}${fmt(p.price, 'on')}</span>
-        <span class="ex-chg ${cls}">${p.on.chg > 0 ? '▲' : '▼'} ${Math.abs(p.on.chg).toFixed(1)}%</span>
-        <button class="ex-buy" data-open="${esc(p.id)}">${out ? 'podgląd' : 'kup · long'}</button>
-      </div>`;
-    }).join('') + `
-      <div class="ex-row locked" role="row">
-        <span class="ex-n mono">0${PRODUCTS.length + 1}</span>
-        <span class="ex-t">${LOCKED.on.ticker}</span>
-        <span class="ipo">IPO<br>soon</span>
-        <span class="ex-name">${LOCKED.on.name}<em>${LOCKED.on.sub}</em></span>
-        <span class="ex-spark"></span>
-        <span class="ex-price">—</span>
-        <span class="ex-chg mono" data-countdown="${LOCKED.on.date}">--:--:--</span>
-        <span class="ex-buy" style="opacity:.5">zamknięte</span>
-      </div>`;
-}
-
-/* ============ ticker + quotes (ON) ============ */
-let quotes = [];
-const buildQuotes = () => (quotes = [
-  ...PRODUCTS.map((p) => ({ t: p.on.ticker, v: p.price, c: p.on.chg })),
-  ...INDICES.map(([t, v]) => ({ t, v, c: (Math.random() - 0.4) * 6 })),
-]);
-buildQuotes();
-const hist = Array.from({ length: 60 }, (_, i) => 100 + Math.sin(i / 5) * 8 + i * 0.6 + Math.random() * 4);
-function qfmt(v) { return v < 1 ? v.toFixed(3) : v.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-function renderTicker() {
-  const one = quotes.map((q) => `<span><b>${q.t}</b> ${qfmt(q.v)} <i class="${q.c >= 0 ? 'up' : 'dn'}">${q.c >= 0 ? '▲' : '▼'} ${Math.abs(q.c).toFixed(2)}%</i></span>`).join('');
-  $('#tickerTrack').innerHTML = one + one;
-  $('#quotesMini').innerHTML = quotes.slice(0, 7).map((q) => `<tr><td class="q-t">${q.t}</td><td>${qfmt(q.v)}</td><td class="${q.c >= 0 ? 'up' : 'dn'}">${q.c >= 0 ? '+' : ''}${q.c.toFixed(2)}%</td></tr>`).join('');
-}
-function renderBigChart() {
-  const W = 300, H = 140, min = Math.min(...hist) - 4, max = Math.max(...hist) + 4;
-  const pts = hist.map((v, i) => [i / (hist.length - 1) * W, H - (v - min) / (max - min) * H]);
-  // candles
-  let candles = '';
-  for (let i = 1; i < hist.length; i += 2) {
-    const o = pts[i - 1][1], c = pts[i][1], x = pts[i][0];
-    const up = c < o; candles += `<rect x="${x - 1.6}" y="${Math.min(o, c)}" width="3.2" height="${Math.max(1, Math.abs(o - c))}" fill="${up ? '#0d3a2b' : '#5c0f17'}"/>`;
-  }
-  const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
-  $('#bigChart').innerHTML = `${candles}<path d="${d}" fill="none" stroke="#16110d" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
-    <circle cx="${pts.at(-1)[0] - 2}" cy="${pts.at(-1)[1]}" r="3" fill="#5c0f17"/>`;
-}
-function tickMarket() {
-  if (mode() !== 'on') return;
-  const i = Math.floor(Math.random() * quotes.length), q = quotes[i];
-  const d = (Math.random() - 0.45) * 1.2;
-  q.c += d; q.v = Math.max(0.001, q.v * (1 + d / 100));
-  hist.push(hist.at(-1) + (Math.random() - 0.42) * 5); hist.shift();
-  renderTicker(); renderBigChart();
-  const row = $('#quotesMini').rows[i]; if (row) row.classList.add('flash');
-}
-
-/* ============ countdowns ============ */
-function countdowns() {
-  $$('[data-countdown]').forEach((el) => {
-    let s = Math.max(0, (new Date(el.dataset.countdown) - Date.now()) / 1000);
-    const d = Math.floor(s / 86400); s -= d * 86400;
-    const h = Math.floor(s / 3600); s -= h * 3600; const m = Math.floor(s / 60); s = Math.floor(s - m * 60);
-    el.textContent = `${d}d ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  });
-}
-
-/* ============ cart (js/cart.js) ============ */
-const cart = initCart({ getMode: () => mode(), fmt: (n) => fmt(n), toast, catalog: () => CATALOG });
-const openCart = cart.open;
-
-/* ============ product modal ============ */
+/* ============ quick view modal ============ */
 let current = null, chosen = null;
 function openProduct(id) {
-  const p = byId[id]; if (!p) return;
-  const m = mode(), d = p[m];
+  const p = byId(id); if (!p) return;
   current = p; chosen = p.sizes ? null : 'one';
-  $('#pmImg').src = p.img; $('#pmImg').alt = m === 'ona' ? d.name : d.name;
-  $('#pmKicker').textContent = m === 'ona' ? d.kicker : `${d.ticker} · ${d.sub}`;
-  $('#pmName').textContent = d.name;
-  $('#pmPrice').innerHTML = m === 'ona' ? fmt(p.price) : `${fmt(p.price)} <span class="${d.chg > 0 ? 'up' : 'dn'}" style="font-size:.7em">${d.chg > 0 ? '▲' : '▼'} ${Math.abs(d.chg)}%</span>`;
-  $('#pmDesc').textContent = d.desc;
-  $('#pmPrice').insertAdjacentHTML('afterbegin', p.compareAt ? `<s class="pm-was">${fmt(p.compareAt)}</s> ` : '');
-  $('#pmSizes').innerHTML = p.sizes ? p.sizes.map((s) => {
-    const left = p.stock?.[s] ?? 0;
-    return `<button aria-pressed="false" data-size="${s}" ${left <= 0 ? 'disabled aria-disabled="true" title="brak"' : ''}>${s}${left > 0 && left <= lowStock() ? `<i>${left}</i>` : ''}</button>`;
-  }).join('') + `<span class="pm-stock" id="pmStock"></span>` : '';
+  $('#pmImg').src = p.img; $('#pmImg').alt = p.ona.name;
+  $('#pmKicker').textContent = p.ona.kicker;
+  $('#pmName').textContent = p.ona.name;
+  $('#pmPrice').innerHTML = `${p.compareAt ? `<s class="pm-was">${fmt(p.compareAt)}</s> ` : ''}${fmt(p.price)}`;
+  $('#pmDesc').textContent = p.ona.desc;
+  $('#pmSizes').innerHTML = p.sizes ? p.sizes.map((s) => { const l = p.stock?.[s] ?? 0; return `<button aria-pressed="false" data-size="${s}" ${l <= 0 ? 'disabled' : ''}>${s}${l > 0 && l <= low() ? `<i>${l}</i>` : ''}</button>`; }).join('') + '<span class="pm-stock" id="pmStock"></span>' : '';
   if (!p.sizes && (p.stock?.one ?? 0) <= 0) chosen = null;
-  updateAdd();
-  $('#pmFine').textContent = m === 'ona' ? 'darmowy zwrot do 14 dni · wysyłka w 48 h · pakowane w różową trumnę' : 'rozliczenie T+2 · darmowy zwrot 14 dni · ryzyko inwestycyjne: wygląd';
-  $('#pModal').hidden = false; document.body.classList.add('lock'); $('#pmAdd').focus({ preventScroll: true });
+  $('#pmFine').innerHTML = p.garment ? '<button class="link" id="pmTry">obejrzyj na lalce w 3D →</button>' : 'zwrot 14 dni · wysyłka 48 h';
+  updatePm();
+  $('#pModal').hidden = false; lock(true);
 }
-function updateAdd() {
-  const m = mode(), btn = $('#pmAdd');
-  const sold = current && totalStock(current) <= 0;
-  btn.disabled = !chosen || sold;
-  btn.textContent = sold ? (m === 'ona' ? 'wyprzedane — wróci w drop 02' : 'obrót zawieszony (brak wolumenu)')
-    : !chosen ? (m === 'ona' ? 'wybierz rozmiar, kochanie' : 'wybierz wolumen (rozmiar)')
-      : (m === 'ona' ? 'wrzuć do torebki ♥' : 'otwórz pozycję · long');
-  const ps = $('#pmStock');
-  if (ps && chosen && current) { const l = current.stock?.[chosen] ?? 0; ps.textContent = l <= lowStock() ? (m === 'ona' ? `zostały ${l} szt.!` : `wolumen: ${l} szt.`) : ''; }
+function updatePm() {
+  const sold = current && total(current) <= 0, b = $('#pmAdd');
+  b.disabled = !chosen || sold;
+  b.textContent = sold ? 'wyprzedane' : chosen ? `dodaj do koszyka · ${fmt(current.price)}` : 'wybierz rozmiar';
+  const ps = $('#pmStock'); if (ps && chosen) { const l = current.stock?.[chosen] ?? 0; ps.textContent = l <= low() ? `zostało ${l} szt.` : ''; }
 }
 $('#pmSizes').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-size]'); if (!b) return;
-  if (b.disabled) return;
-  $$('#pmSizes button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-  chosen = b.dataset.size; updateAdd();
+  const b = e.target.closest('[data-size]'); if (!b || b.disabled) return;
+  $$('#pmSizes button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); chosen = b.dataset.size; updatePm();
 });
 $('#pmAdd').addEventListener('click', () => {
   if (!current || !chosen) return;
-  cart.add(current.id, chosen === 'one' ? null : chosen);
-  closeModals();
-  toast(mode() === 'ona' ? `♥ ${current.ona.name} już w torebce` : `zlecenie przyjęte: ${current.on.ticker} ×1`, { label: 'zobacz', fn: () => openCart(true) });
+  cart.add(current.id, chosen === 'one' ? null : chosen); closeModals();
+  toast(`${current.ona.name} w koszyku`, { label: 'zobacz koszyk', fn: () => cart.open(true) });
 });
-function closeModals() { $$('.modal').forEach((m) => (m.hidden = true)); document.body.classList.remove('lock'); }
-window.addEventListener('d12:open', (e) => openProduct(e.detail));
+$('#pModal').addEventListener('click', (e) => { if (e.target.closest('#pmTry')) { closeModals(); openTryon(current.id); } });
+function closeModals() { $$('.modal').forEach((m) => (m.hidden = true)); if (tryon.hidden) lock(false); }
 $$('[data-close]').forEach((el) => el.addEventListener('click', closeModals));
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !cart.isOpen()) { closeModals(); openCart(false); } });
-document.addEventListener('click', (e) => {
-  const o = e.target.closest('[data-open]'); if (o) openProduct(o.dataset.open);
-});
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.target.matches('[data-open]')) openProduct(e.target.dataset.open);
+  if (e.key !== 'Escape' || cart.isOpen()) return;
+  if (!$('#pModal').hidden || !$('#sizeModal').hidden) return closeModals();
+  if (!tryon.hidden) return closeTryon();
+  cart.open(false);
 });
+window.addEventListener('d12:open', (e) => { const p = byId(e.detail); if (p?.garment) openTryon(p.id); else openProduct(e.detail); });
+$('#sizeGuideBtn').addEventListener('click', () => { $('#sizeModal').hidden = false; lock(true); });
 
-/* ============ subscribe ============ */
+/* ============ countdowns / misc ============ */
+function countdowns() {
+  const target = new Date(LOCKED.ona.date).getTime();
+  let s = Math.max(0, (target - Date.now()) / 1000);
+  const d = Math.floor(s / 86400); s -= d * 86400; const h = Math.floor(s / 3600); s -= h * 3600; const m = Math.floor(s / 60); const sec = Math.floor(s - m * 60);
+  const pad = (n) => String(n).padStart(2, '0');
+  $$('[data-countdown]').forEach((el) => (el.textContent = `${d}d ${pad(h)}:${pad(m)}`));
+  const b = $$('#cd02 b'); if (b.length) { b[0].textContent = d; b[1].textContent = pad(h); b[2].textContent = pad(m); b[3].textContent = pad(sec); }
+}
 $$('[data-sub]').forEach((f) => f.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const msg = f.parentElement.querySelector('.tomb-msg');
-  msg.textContent = f.classList.contains('on') ? 'Podpisano. Pierwszy raport w skrzynce przed otwarciem sesji.' : 'pochowane ♥ odezwiemy się zza grobu.';
-  f.reset();
+  e.preventDefault(); f.parentElement.querySelector('.sub-msg').textContent = 'jesteś na liście ✶ dostaniesz drop 02 24 h wcześniej.'; f.reset();
 }));
 
-/* ============ doll speech ============ */
-const SAYS = [
-  'mama mówi, że czarny wyszczupla duszę',
-  'nie dotykaj włosów. no dobra, dotknij',
-  'mam 12 lat po śmierci. i świetną bluzę',
-  'w zestawie: 0 duszy, 1 drama',
-  'ken odszedł. zabrał tylko krawat',
-  'kup bluzę albo cię nawiedzę ♥',
-  'róż to czerń, która się uśmiecha',
-  'nie śpię. ja czekam na drop 02',
-];
-let sayI = 0, sayT;
-function dollSay(txt) {
-  const b = $('#dollSays'); b.textContent = txt || SAYS[sayI++ % SAYS.length];
-  b.classList.add('show'); clearTimeout(sayT); sayT = setTimeout(() => b.classList.remove('show'), 2600);
-  burst();
-}
-function burst() {
-  const r = $('#dollCanvas').getBoundingClientRect();
-  for (let i = 0; i < 14; i++) {
-    const s = document.createElement('i'); s.className = 'trail';
-    const a = Math.random() * Math.PI * 2, d = 60 + Math.random() * 120;
-    s.style.left = r.left + r.width / 2 + 'px'; s.style.top = r.top + r.height * 0.45 + 'px';
-    s.style.width = s.style.height = 10 + Math.random() * 18 + 'px';
-    s.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d}px) rotate(200deg) scale(0)` }], { duration: 900, easing: 'cubic-bezier(.2,.8,.2,1)' });
-    document.body.appendChild(s); setTimeout(() => s.remove(), 900);
-  }
-}
-
-/* ============ draggable stickers ============ */
-$$('.stk.drag').forEach((el) => {
-  let sx, sy, ox, oy;
-  el.addEventListener('pointerdown', (e) => {
-    e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('grab');
-    const host = el.offsetParent.getBoundingClientRect();
-    sx = e.clientX; sy = e.clientY; ox = el.offsetLeft; oy = el.offsetTop;
-    el._host = host;
-  });
-  el.addEventListener('pointermove', (e) => {
-    if (!el.classList.contains('grab')) return;
-    el.style.left = ox + e.clientX - sx + 'px'; el.style.top = oy + e.clientY - sy + 'px';
-  });
-  const up = () => el.classList.remove('grab');
-  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
-});
-
-/* ============ business card ============ */
-const bcard = $('#bcard');
-$('#cardName').addEventListener('input', (e) => ($('#bcName').textContent = e.target.value || ' '));
-$('#cardRole').addEventListener('input', (e) => ($('#bcRole').textContent = e.target.value || ' '));
-$('.bcard-stage').addEventListener('pointermove', (e) => {
-  const r = bcard.getBoundingClientRect();
-  const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-  bcard.style.setProperty('--ry', `${x * 30}deg`); bcard.style.setProperty('--rx', `${-y * 24}deg`);
-  bcard.style.setProperty('--gx', `${(x + 0.5) * 100}%`);
-});
-$('.bcard-stage').addEventListener('pointerleave', () => { bcard.style.removeProperty('--rx'); bcard.style.removeProperty('--ry'); });
-
-/* ============ date ============ */
-$('#mhDate').textContent = new Date().toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-/* ============ cursor ============ */
-const cur = $('#cur'), read = $('.c-read');
-if (matchMedia('(pointer:fine)').matches && !matchMedia('(prefers-reduced-motion:reduce)').matches) {
-  html.classList.add('has-cur');
-  let lastTrail = 0;
-  window.addEventListener('pointermove', (e) => {
-    cur.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
-    cur.classList.toggle('hover', !!e.target.closest('a,button,[data-open],input,.stk,canvas'));
-    if (mode() === 'ona') {
-      const now = performance.now();
-      if (now - lastTrail > 45) {
-        lastTrail = now;
-        const s = document.createElement('i'); s.className = 'trail';
-        s.style.left = e.clientX + 'px'; s.style.top = e.clientY + 'px';
-        document.body.appendChild(s); setTimeout(() => s.remove(), 900);
-      }
-    } else {
-      const v = (1000 - e.clientY / innerHeight * 1000 + e.clientX / innerWidth * 120).toFixed(2);
-      read.textContent = `D12 ${v} ${e.movementY <= 0 ? '▲' : '▼'}`;
-    }
-  }, { passive: true });
-}
-
-/* ============ 3D ============ */
-let dollStage = null, chairStage = null, coinStage = null;
-async function boot3D(progress) {
-  try {
-    const { loadDoll, createDollStage } = await import('./doll.js');
-    await loadDoll(progress);
-    dollStage = await createDollStage($('#dollCanvas'), { theme: 'ona', onPoke: () => dollSay() });
-    setTimeout(() => dollSay('pociągnij mnie za rękę…'), 1200);
-  } catch (err) { console.warn('3D doll failed', err); $('#dollCanvas').closest('.db-window').classList.add('no3d'); }
-}
-async function bootOn3D() {
-  if (coinStage) return;
-  try {
-    const { createCoin } = await import('./coin.js');
-    coinStage = await createCoin($('#coinCanvas'));
-    import('./doll.js').then(({ createDollStage }) => createDollStage($('#chairCanvas'), { theme: 'on' }))
-      .then((s) => { chairStage = s; set3DActive(); });
-  } catch (err) { console.warn('3D ON failed', err); }
-}
-function set3DActive() {
-  const m = mode();
-  dollStage?.setActive(m === 'ona');
-  coinStage?.setActive(m === 'on'); chairStage?.setActive(m === 'on');
-}
-
-/* ============ mode switch ============ */
-function applyMode(m) {
-  html.dataset.mode = m;
-  $('#world-ona').hidden = m !== 'ona';
-  $('#world-on').hidden = m !== 'on';
-  $$('.switch [data-go]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.go === m)));
-  document.title = m === 'ona' ? 'dead12 — ONA · pokaz zza grobu' : 'dead12 — ON · The dead12 Journal';
-  $('link[rel=icon]').href = m === 'ona' ? 'assets/img/star-pink.png' : 'assets/img/skull.png';
-  store.set('dead12-mode', m);
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', m === 'ona' ? '#0d060c' : '#efe1cd');
-  history.replaceState(null, '', '#' + m);
-  window.dispatchEvent(new Event('d12:mode'));
-  if (m === 'on') { renderTicker(); renderBigChart(); bootOn3D(); }
-  set3DActive();
-}
-const shutter = $('#shutter'), bars = $('.sh-bars');
-bars.innerHTML = Array.from({ length: 12 }, (_, i) => `<i style="--i:${i}"></i>`).join('');
-let switching = false;
-function switchMode(m) {
-  if (m === mode() || switching) return;
-  switching = true;
-  const word = $('.sh-word');
-  if (m === 'on') {
-    shutter.style.setProperty('--sh-c', '#16110d'); shutter.style.setProperty('--sh-t', '#e6c27a');
-    word.className = 'sh-word on'; word.innerHTML = '<div>On.<small>dead12 capital · otwarcie sesji</small></div>';
-  } else {
-    shutter.style.setProperty('--sh-c', '#ff0a84'); shutter.style.setProperty('--sh-t', '#0d060c');
-    word.className = 'sh-word ona'; word.innerHTML = '<div>Ona<small>★ pokaz zza grobu ★</small></div>';
-  }
-  shutter.classList.remove('outro'); shutter.classList.add('run');
-  requestAnimationFrame(() => requestAnimationFrame(() => shutter.classList.add('in')));
-  setTimeout(() => {
-    applyMode(m); window.scrollTo({ top: 0, behavior: 'instant' });
-    setTimeout(() => {
-      shutter.classList.add('outro'); shutter.classList.remove('in');
-      setTimeout(() => { shutter.classList.remove('run', 'outro'); switching = false; }, 950);
-    }, 380);
-  }, 820);
-}
-$$('.switch [data-go]').forEach((b) => b.addEventListener('click', () => switchMode(b.dataset.go)));
-
-/* ============ header on scroll ============ */
-const topEl = $('#top');
-addEventListener('scroll', () => topEl.classList.toggle('scrolled', scrollY > 40), { passive: true });
-
 /* ============ init ============ */
-function renderShop() { PRODUCTS = CATALOG.products; byId = Object.fromEntries(PRODUCTS.map((p) => [p.id, p])); renderOna(); renderOn(); }
-async function loadCatalog() {
-  try { CATALOG = await api.getCatalog(); renderShop(); buildQuotes(); renderTicker(); cart.refresh(); }
-  catch (e) { console.warn('catalog failed, using seed', e); }
+function renderAll() {
+  const h = location.hash.slice(1);
+  if (!byId(pdp.id)) pdp.id = byId(h)?.garment ? h : wearables()[0]?.id;
+  if (!booted && byId(h)?.garment) { booted = true; openTryon(h); } booted = true;
+  renderPdp(); renderBoxes(); countdowns();
+  $$('[data-free]').forEach((el) => (el.textContent = fmt(CATALOG.settings.freeShipFrom)));
 }
-// refresh stock after an order and when the tab comes back
+async function loadCatalog() {
+  try {
+    const c = await api.getCatalog();
+    CATALOG = { ...c, products: c.products.map(withSeed) };
+    renderAll(); cart.refresh();
+  } catch (e) { console.warn('katalog: używam danych startowych', e); }
+}
+let booted = false;
+renderAll();
+setInterval(countdowns, 1000);
+// hero 3D
+import('./hero.js').then(({ createHero }) => createHero($('#heroCanvas'))).then(() => $('.hero').classList.add('live')).catch((e) => console.warn('hero 3D', e));
+reveal();
+loadCatalog();
 window.addEventListener('d12:ordered', loadCatalog);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadCatalog(); });
-renderShop(); renderTicker(); renderBigChart(); countdowns(); loadCatalog();
-setInterval(countdowns, 1000); setInterval(tickMarket, 1800);
-const initial = (location.hash.slice(1) === 'on' || location.hash.slice(1) === 'ona') ? location.hash.slice(1) : store.get('dead12-mode', 'ona');
-applyMode(initial);
-
-const loader = $('#loader'), bar = $('.ld-bar i'), pct = $('#ld-pct');
-let shown = 0;
-const setP = (v) => { const p = Math.max(shown, Math.round(v * 100)); shown = p; bar.style.width = p + '%'; pct.textContent = p; };
-const done = () => { setP(1); setTimeout(() => loader.classList.add('out'), 250); };
-const hardStop = setTimeout(done, 7000);
-Promise.all([
-  initial === 'ona' ? boot3D((f) => setP(f * 0.95)) : bootOn3D(),
-  document.fonts.ready,
-]).then(() => { clearTimeout(hardStop); done(); if (initial === 'on') boot3D(); });

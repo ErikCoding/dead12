@@ -109,14 +109,15 @@ async function loadDash() {
     $('#quickDemo').onclick = async () => { await guard(A.demo(60)); toast('dodano zamówienia demo'); loadDash(); };
   } else revChart(s.byDay);
 
-  // split
-  const tot = s.byMode.ona.revenue + s.byMode.on.revenue || 1;
-  const po = (s.byMode.ona.revenue / tot) * 100;
+  // today vs daily average
+  const today = s.byDay[s.byDay.length - 1] || { revenue: 0, orders: 0 };
+  const avgR = s.revenue / Math.max(1, s.days), avgO = s.orders / Math.max(1, s.days);
+  const pr = avgR ? (today.revenue / avgR) * 100 : 0;
   $('#split').innerHTML = `
-    <div class="splitbar"><i style="width:${po}%;background:var(--c-ona)"></i><i style="width:${100 - po}%;background:var(--c-on)"></i></div>
+    <div class="splitbar"><i style="width:${Math.min(100, pr / 2)}%;background:var(--c-ona)"></i><i style="width:${100 - Math.min(100, pr / 2)}%;background:var(--s3)"></i></div>
     <div class="split-rows">
-      <div><span class="sw" style="--c:var(--c-ona)"></span><b>ONA</b><span>${po.toFixed(0)}%</span><span>${zl0(s.byMode.ona.revenue)}</span><span class="muted">${s.byMode.ona.orders} zam. · AOV ${zl0(s.byMode.ona.orders ? s.byMode.ona.revenue / s.byMode.ona.orders : 0)}</span></div>
-      <div><span class="sw" style="--c:var(--c-on)"></span><b>ON</b><span>${(100 - po).toFixed(0)}%</span><span>${zl0(s.byMode.on.revenue)}</span><span class="muted">${s.byMode.on.orders} zam. · AOV ${zl0(s.byMode.on.orders ? s.byMode.on.revenue / s.byMode.on.orders : 0)}</span></div>
+      <div><span class="sw" style="--c:var(--c-ona)"></span><b>dziś</b><span>${today.orders} zam.</span><span>${zl0(today.revenue)}</span><span class="muted">${avgR ? (pr >= 100 ? '▲ ' : '▼ ') + Math.abs(pr - 100).toFixed(0) + '% vs średnia' : 'brak danych'}</span></div>
+      <div><span class="sw" style="--c:var(--s3)"></span><b>średnio / dzień</b><span>${avgO.toFixed(1)} zam.</span><span>${zl0(avgR)}</span><span class="muted">z ostatnich ${s.days} dni</span></div>
     </div>`;
 
   const max = Math.max(1, ...s.topProducts.map((p) => p.revenue));
@@ -154,8 +155,7 @@ function revChart(byDay) {
     const ona = d.ona || 0, on = d.on || 0;
     const h1 = (ona / top) * ih, h2 = (on / top) * ih;
     const r = Math.min(4, w / 2);
-    if (ona) bars += `<path d="${barPath(x, y(0) - h1, w, h1, on ? 0 : r)}" fill="var(--c-ona)"/>`;
-    if (on) bars += `<path d="${barPath(x, y(0) - h1 - h2 - (ona ? 2 : 0), w, h2, r)}" fill="var(--c-on)"/>`;
+    const hh = h1 + h2; if (hh) bars += `<path d="${barPath(x, y(0) - hh, w, hh, r)}" fill="var(--c-ona)"/>`;
     hits += `<rect x="${pl + i * bw}" y="${pt}" width="${bw}" height="${ih}" class="hit" data-i="${i}"/>`;
     if ((i % every === 0 && n - 1 - i >= every / 2) || i === n - 1) g += `<text x="${x + w / 2}" y="${H - 6}" class="ax" text-anchor="middle">${dshort(d.day)}</text>`;
   });
@@ -166,12 +166,11 @@ function revChart(byDay) {
     const d = byDay[+hit.dataset.i], cx = +hit.getAttribute('x') + bw / 2;
     const c = $('#cross'); c.setAttribute('x1', cx); c.setAttribute('x2', cx);
     tip.innerHTML = `<b>${new Date(d.day).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' })}</b>
-      <span><i style="--c:var(--c-ona)"></i>ONA <em>${zl(d.ona || 0)}</em></span><span><i style="--c:var(--c-on)"></i>ON <em>${zl(d.on || 0)}</em></span>
-      <span class="tt">razem <em>${zl(d.revenue)}</em></span><span class="tt">${d.orders} zam.</span>`;
+      <span><i style="--c:var(--c-ona)"></i>przychód <em>${zl(d.revenue)}</em></span><span class="tt">${d.orders} zam.</span>`;
     placeTip(e);
   };
   el.onpointerleave = () => { tip.classList.remove('show'); const c = $('#cross'); if (c) { c.setAttribute('x1', -10); c.setAttribute('x2', -10); } };
-  $('#revTable').innerHTML = `<table class="mt"><thead><tr><th>dzień</th><th>ONA</th><th>ON</th><th>razem</th><th>zam.</th></tr></thead><tbody>${byDay.filter((d) => d.orders).reverse().map((d) => `<tr><td>${d.day}</td><td>${zl(d.ona || 0)}</td><td>${zl(d.on || 0)}</td><td>${zl(d.revenue)}</td><td>${d.orders}</td></tr>`).join('')}</tbody></table>`;
+  $('#revTable').innerHTML = `<table class="mt"><thead><tr><th>dzień</th><th>przychód</th><th>zam.</th></tr></thead><tbody>${byDay.filter((d) => d.orders).reverse().map((d) => `<tr><td>${d.day}</td><td>${zl(d.revenue)}</td><td>${d.orders}</td></tr>`).join('')}</tbody></table>`;
 }
 function barPath(x, yTop, w, h, r) {
   if (h <= 0) return '';
@@ -212,7 +211,7 @@ function renderOrders() {
   $('#oTable').innerHTML = `<div class="orow ohead"><span>nr</span><span>data</span><span>klient</span><span>pozycje</span><span>kwota</span><span>płatność</span><span>status</span></div>` +
     list.slice(0, oLimit).map((o) => `
     <button class="orow" data-oid="${esc(o.id)}">
-      <span class="o-id"><i class="mode-dot ${o.mode}" title="${o.mode === 'ona' ? 'strefa ONA' : 'strefa ON'}"></i>${esc(o.id)}${o.demo ? ' <span class="tag">demo</span>' : ''}</span>
+      <span class="o-id">${esc(o.id)}${o.demo ? ' <span class="tag">demo</span>' : ''}</span>
       <span class="o-dt">${dt(o.createdAt)}</span>
       <span class="o-cu"><b>${esc(o.customer.name)}</b><small>${esc(o.customer.city)}</small></span>
       <span class="o-it">${o.items.map((i) => `${esc(i.name?.ona || i.id)}${i.size ? ' ' + i.size : ''}${i.q > 1 ? ' ×' + i.q : ''}`).join(', ')}</span>
@@ -231,7 +230,7 @@ $('#oTable').addEventListener('click', (e) => { const r = e.target.closest('[dat
 function openOrder(id) {
   const o = orders.find((x) => x.id === id); if (!o) return;
   $('#dTitle').innerHTML = `${esc(o.id)} <span class="pill st-${o.status}">${ST[o.status].label}</span>`;
-  $('#dDate').textContent = `${dt(o.createdAt)} · strefa ${o.mode.toUpperCase()}`;
+  $('#dDate').textContent = dt(o.createdAt);
   const c = o.customer;
   const nxt = NEXT[o.status];
   $('#dBody').innerHTML = `
@@ -306,7 +305,7 @@ let codes = [];
 async function loadCodes() {
   codes = await guard(A.discounts());
   const typeL = (c) => c.type === 'percent' ? `−${c.value}%` : c.type === 'amount' ? `−${c.value} zł` : 'darmowa dostawa';
-  const modeL = { all: 'obie strefy', ona: 'ONA', on: 'ON' };
+  const modeL = { all: 'cały sklep', ona: 'cały sklep', on: 'cały sklep' };
   $('#codesList').innerHTML = codes.length ? codes.map((c) => {
     const expired = c.expires && new Date(c.expires) < new Date();
     const pct = c.limit ? Math.min(100, (c.used / c.limit) * 100) : 0;

@@ -1,16 +1,14 @@
 <!doctype html>
-<html lang="pl" data-mode="ona">
+<html lang="pl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0d060c">
-<title>dead12 — sklep zza grobu</title>
-<meta name="description" content="dead12 — odzież zza grobu. Strefa ONA i strefa ON.">
+<meta name="theme-color" content="#0b0a0b">
+<title>dead12 — ubrania zza grobu · drop 01</title>
+<meta name="description" content="dead12 — streetwear zza grobu. Drop 01: zip hoodie z gwiazdami i kratą. Przymierz w 3D, wysyłka w 48 h, darmowa dostawa od 300 zł.">
 <link rel="icon" href="assets/img/star-pink.png">
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/base.css">
-<link rel="stylesheet" href="css/ona.css">
-<link rel="stylesheet" href="css/on.css">
+<link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="css/shop.css">
 <link rel="stylesheet" href="css/celebrate.css">
 <script type="importmap">
@@ -22,243 +20,166 @@
 </head>
 <body>
 
-<!-- ============ LOADER ============ -->
-<div id="loader" aria-hidden="true">
-  <img src="assets/img/logo-dark.png" alt="">
-  <div class="ld-bar"><i></i></div>
-  <p class="ld-txt">wskrzeszanie<span>…</span> <b id="ld-pct">0</b>%</p>
-</div>
+<a class="skip" href="#drop">przejdź do produktów</a>
 
-<!-- ============ HEADER (shared, themed) ============ -->
-<header id="top">
-  <a class="brand" href="#" aria-label="dead12 — strona główna">
-    <img class="logo-ona" src="assets/img/logo-dark.png" alt="dead12">
-    <img class="logo-on" src="assets/img/logo-color.png" alt="dead12">
-  </a>
-
-  <nav class="switch" role="tablist" aria-label="Wybierz strefę">
-    <button role="tab" data-go="ona" aria-selected="true"><span>ONA</span></button>
-    <span class="switch-knob" aria-hidden="true"></span>
-    <button role="tab" data-go="on" aria-selected="false"><span>ON</span></button>
+<header class="top" id="top">
+  <a class="brand" href="#" aria-label="dead12 — strona główna"><img src="assets/img/logo-dark.png" alt="dead12" width="168" height="56"></a>
+  <nav class="nav" aria-label="główna">
+    <a href="#drop">drop 01</a><a href="#" data-tryon>przymierzalnia</a><a href="#marka">marka</a><a href="#drop02">drop 02</a>
   </nav>
-
   <button class="cart-btn" id="cartBtn" aria-label="Koszyk">
-    <svg class="cb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-    <span class="cb-ona">torebka</span><span class="cb-on">portfel</span>
-    <b id="cartCount">0</b>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 8V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+    <span class="cb-l">koszyk</span><b id="cartCount">0</b>
   </button>
 </header>
 
-<!-- =====================================================
-     ONA — ponura barbie / dollhouse zza grobu
-     ===================================================== -->
-<main class="world" id="world-ona" data-world="ona">
-
-  <section class="ona-hero">
-    <div class="ona-grain"></div>
-    <div class="ona-hero-type">
-      <p class="pix tag">drop 01 · dolls · seria nr 012/666</p>
-      <h1>
-        <span class="bubble" data-text="pokaz">pokaz</span>
-        <span class="fraktur">zza grobu</span>
-      </h1>
-      <p class="hand">ubrania dla dziewczyn, które<br>wstały z trumny <s>za wcześnie</s> w samą porę ♥</p>
-      <a href="#ona-shop" class="ona-cta"><span>otwórz pudełko</span></a>
-    </div>
-
-    <!-- the doll box -->
-    <div class="dollbox">
-      <div class="db-top">
-        <img src="assets/img/logo-dark.png" alt="">
-        <span class="pix">fashion corpse™</span>
-      </div>
-      <div class="db-window">
-        <canvas id="dollCanvas" aria-label="Lalka dead12 3D — przeciągnij aby obrócić"></canvas>
-        <div class="db-cello"></div>
-        <div class="db-bubble pix" id="dollSays">pociągnij mnie za rękę…</div>
-      </div>
-      <div class="db-side db-side-l pix">dead12 dolls · nie dla grzecznych · dead12 dolls · nie dla grzecznych ·</div>
-      <div class="db-side db-side-r pix">w zestawie: 1 bluza · 0 duszy · szczotka do włosów sprzedawana osobno ·</div>
-      <div class="db-bottom">
-        <div class="db-stamp">
-          <img src="assets/img/skull-white.png" alt="">
-          <span>12+<br>lat po śmierci</span>
-        </div>
-        <p class="pix">kliknij lalkę · przeciągnij by obrócić</p>
-        <div class="db-barcode" aria-hidden="true"></div>
+<main>
+  <!-- ============ HERO ============ -->
+  <section class="hero" id="top-hero">
+    <canvas id="heroCanvas" aria-label="Czaszka dead12 w 3D — przeciągnij, aby zakręcić"></canvas>
+    <div class="hero-grid" aria-hidden="true"></div>
+    <div class="hero-copy rv">
+      <p class="kick pix"><span class="dot"></span>drop 01 · 120 sztuk · już żyje</p>
+      <h1><span class="h-l1">ubrania</span><span class="frak h-l2">zza grobu.</span></h1>
+      <p class="hero-sub">streetwear dla tych, którzy wolą wyglądać jak duch niż jak katalog. obróć każdą bluzę w 3D — a potem przymierz ją na lalce.</p>
+      <div class="hero-cta">
+        <a href="#drop" class="btn-buy as-link">zobacz drop 01 ↓</a>
+        <button class="btn-now" data-tryon>przymierz w 3D</button>
       </div>
     </div>
-
-    <!-- draggable stickers -->
-    <img class="stk drag" style="--x:36%;--y:74%;--r:-14deg;--w:110px" src="assets/img/star-pink.png" alt="">
-    <img class="stk drag" style="--x:86%;--y:16%;--r:12deg;--w:100px" src="assets/img/skull.png" alt="">
-    <img class="stk drag" style="--x:80%;--y:76%;--r:-6deg;--w:190px" src="assets/img/logo-dark.png" alt="">
-    <img class="stk drag" style="--x:46%;--y:8%;--r:20deg;--w:60px" src="assets/img/star-pink.png" alt="">
-    <p class="pix drag-hint">↖ naklejki da się przesuwać</p>
+    <div class="hero-foot">
+      <span class="pix">⟲ zakręć czaszką</span>
+      <span class="pix hero-scroll">przewiń <i>↓</i></span>
+    </div>
+    <img src="assets/img/star-pink.png" alt="" class="hero-star s1" aria-hidden="true">
+    <img src="assets/img/star-pink.png" alt="" class="hero-star s2" aria-hidden="true">
   </section>
 
-  <div class="tape tape-a"><div class="tape-track" data-marquee>
-    <span>★ martwa ale słodka ★ dead cute ★ pokaz zza grobu ★ drop 01 ★ szyte w ciemności ★ nie oddajemy dusz ★</span>
-  </div></div>
+  <div class="tape tape-top"><div class="tape-track" data-marquee><span>darmowa dostawa od <b data-free>300 zł</b> ✶ drop 01 ✶ zip hoodie 450 g ✶ wysyłka 48 h ✶ zwrot 14 dni ✶ szyte w ciemności ✶ nie dla grzecznych ✶ </span><span aria-hidden="true">darmowa dostawa od <b data-free>300 zł</b> ✶ drop 01 ✶ zip hoodie 450 g ✶ wysyłka 48 h ✶ zwrot 14 dni ✶ szyte w ciemności ✶ nie dla grzecznych ✶ </span></div></div>
 
-  <section class="ona-shop" id="ona-shop">
-    <header class="ona-sec-head">
-      <p class="pix">katalog · strona 13</p>
-      <h2><span class="fraktur">Kolekcja</span> <span class="bubble sm" data-text="w blistrach">w blistrach</span></h2>
-      <p class="hand">każda sztuka zapakowana jak lalka. rozpakowanie unieważnia gwarancję duszy.</p>
+  <!-- ============ DROP 01 · boxes ============ -->
+  <section class="drop" id="drop">
+    <header class="sec-h rv">
+      <h2>drop 01 <span class="frak">w trumienkach</span></h2>
     </header>
-    <div class="blisters" id="onaProducts"></div>
+    <div class="boxes" id="boxes"></div>
   </section>
-
-  <div class="tape tape-b"><div class="tape-track rev" data-marquee>
-    <span>♥ rozmiary od XS do „i tak umrzesz” ♥ wysyłka trumną kurierską ♥ zwrot do 14 dni ♥ nie karmić po północy ♥</span>
-  </div></div>
-
-  <section class="diary">
-    <div class="diary-page">
-      <div class="diary-holes" aria-hidden="true"></div>
-      <p class="pix diary-date">pt. 13 · noc · świeczka nr 3</p>
-      <h2 class="fraktur">Drogi pamiętniku,</h2>
-      <p class="hand big">dziś znowu ktoś powiedział, że wyglądam <s>blado</s> <s>chorowicie</s> <mark>zjawiskowo</mark>.<br>
-      założyłam bluzę z gwiazdkami i cmentarz nagle zrobił się różowy.</p>
-      <p class="hand">notatka: czarny wyszczupla duszę. kratka jest dla wdów, które wygrały.</p>
-      <figure class="polaroid p1"><img src="assets/img/hoodie-stars.png" alt="Bluza z gwiazdkami"><figcaption class="hand">ja w czwartek ♥</figcaption></figure>
-      <figure class="polaroid p2"><img src="assets/img/hoodie-plaid.png" alt="Bluza w kratę z czaszką"><figcaption class="hand">wdowa-core</figcaption></figure>
-      <img class="diary-skull" src="assets/img/skull.png" alt="">
-      <span class="diary-heart" aria-hidden="true">♥</span>
-    </div>
-  </section>
-
-  <section class="grave">
-    <div class="tomb">
-      <p class="pix">klub fanek zza grobu</p>
-      <h2 class="fraktur">R.I.P.</h2>
-      <p class="tomb-sub">tu spoczywa Twoja skrzynka mailowa.<br>pierwsza dowie się o drop 02.</p>
-      <form class="sub-form" data-sub>
-        <input type="email" required placeholder="twoj@mail.zza.grobu" aria-label="E-mail">
-        <button type="submit">pochowaj</button>
-      </form>
-      <p class="tomb-msg hand" aria-live="polite"></p>
-    </div>
-    <div class="grass" aria-hidden="true"></div>
-  </section>
-
-  <footer class="ona-foot">
-    <img src="assets/img/dead12-block-white.png" alt="DEAD12" class="ona-foot-big">
-    <div class="ona-foot-row pix">
-      <span>© 2026 dead12</span><a href="#">regulamin trumny</a><a href="#">zwroty</a><a href="#">kontakt z zaświatami</a><a href="#">instagram</a>
-    </div>
-  </footer>
-</main>
-
-<!-- =====================================================
-     ON — dead12 capital / the dead12 journal
-     ===================================================== -->
-<main class="world" id="world-on" data-world="on" hidden>
-
-  <div class="on-ticker"><div class="tk-track" id="tickerTrack"></div></div>
-
-  <section class="masthead">
-    <div class="mh-meta mono">
-      <span id="mhDate">czwartek, 29 października 2026</span>
-      <span>wydanie nr XII · rok zgonu: 2012</span>
-      <span>cena: 1 dusza (z VAT)</span>
-    </div>
-    <h1 class="mh-title"><span>The</span> dead12 <span>Journal</span></h1>
-    <div class="mh-rule"><i></i><b class="mono">dział męski · finanse, garnitury, nekrologi</b><i></i></div>
-  </section>
-
-  <section class="on-front">
-    <article class="col col-lead">
-      <p class="kicker mono">rynki · na sygnale</p>
-      <h2 class="headline">Rynek umarł.<br><em>Niech żyje<br>garnitur.</em></h2>
-      <p class="dek">Analitycy dead12 Capital ogłaszają: bluza z zamkiem to nowy dwurzędowy. Krawat odchodzi do historii — z honorami.</p>
-      <p class="body drop">W poniedziałek o 9:12 notowania czaszki z piszczelami przebiły szklany sufit i kilka trumien. Zarząd nie skomentował, bo zarząd nie żyje od 2012 roku — co, jak zgodnie przyznają inwestorzy, „bardzo poprawiło kulturę spotkań”.</p>
-      <a href="#on-market" class="on-btn"><span>przejdź na parkiet</span><i>→</i></a>
-    </article>
-
-    <figure class="col col-cert">
-      <div class="cert">
-        <div class="cert-guilloche" aria-hidden="true"></div>
-        <p class="cert-top mono">akcja zwykła na okaziciela · seria D12</p>
-        <canvas id="coinCanvas" aria-label="Złota moneta z czaszką dead12"></canvas>
-        <p class="cert-name">Jedna Dusza</p>
-        <div class="cert-sign">
-          <span class="script">dead twelve</span>
-          <small class="mono">prezes zarządu (zm.)</small>
-        </div>
-        <span class="cert-no mono">Nº 000012</span>
+  <!-- ============ BRAND ============ -->
+  <section class="brandband" id="marka">
+    <div class="tape"><div class="tape-track" data-marquee><span>nie dla grzecznych ✶ dead cute ✶ szyte w ciemności ✶ drop 01 ✶ nie oddajemy dusz ✶ </span><span aria-hidden="true">nie dla grzecznych ✶ dead cute ✶ szyte w ciemności ✶ drop 01 ✶ nie oddajemy dusz ✶ </span></div></div>
+    <div class="manifest">
+      <h2><span>nie dla</span> <span class="frak">grzecznych.</span></h2>
+      <div class="m-cols">
+        <p>dead12 to marka z Trójmiasta dla tych, którzy wolą wyglądać jak duch niż jak katalog. Małe serie, ręcznie projektowane nadruki, krój oversize — każdy drop wychodzi raz i nie wraca.</p>
+        <p>Pakujemy w czarne pudełka z czaszką. Bez plastiku, bez ściemy. Jeśli coś nie siedzi — oddajesz w 14 dni.</p>
       </div>
-      <figcaption class="mono">ryc. 1 — moneta obiegowa dead12 capital. przeciągnij, aby rzucić.</figcaption>
-    </figure>
-
-    <aside class="col col-quotes">
-      <p class="kicker mono">notowania · live</p>
-      <table class="quotes" id="quotesMini"></table>
-      <div class="chart-mini"><svg id="bigChart" viewBox="0 0 300 140" preserveAspectRatio="none"></svg></div>
-      <p class="fine mono">dane opóźnione o wieczność.<br>przeszłe wyniki nie gwarantują przyszłego życia.</p>
-    </aside>
+      <img src="assets/img/skull-white.png" alt="" class="m-skull" width="120" height="200" loading="lazy">
+      <img src="assets/img/star-pink.png" alt="" class="m-star" width="80" height="76" loading="lazy">
+    </div>
+    <ul class="facts">
+      <li><b>01</b><span>drop</span></li>
+      <li><b>450 g</b><span>gramatura</span></li>
+      <li><b>48 h</b><span>wysyłka</span></li>
+      <li><b>0</b><span>dusz w zestawie</span></li>
+    </ul>
   </section>
 
-  <section class="on-market" id="on-market">
-    <header class="on-sec-head">
-      <p class="kicker mono">sekcja B · parkiet</p>
-      <h2 class="headline sm">Notowania <em>odzieży</em></h2>
-    </header>
-    <div class="exchange" id="onProducts" role="table" aria-label="Produkty"></div>
-  </section>
-
-  <section class="board">
-    <div class="frame">
-      <canvas id="chairCanvas" aria-label="Portret prezes zarządu — lalka dead12 3D"></canvas>
-      <div class="frame-plate"><span>Prezes Zarządu</span><small class="mono">olej na plastiku, 2012 – ∞</small></div>
-    </div>
-    <div class="board-txt">
-      <p class="kicker mono">sekcja C · ludzie biznesu</p>
-      <h2 class="headline sm">Ona prowadzi firmę.<br><em>Ty nosisz garnitur.</em></h2>
-      <p class="body drop">Prezes zarządu dead12 Capital nigdy nie przegrała negocjacji. Głównie dlatego, że nie mruga. W wywiadzie dla naszego dziennika powiedziała tylko: „Kupujcie bluzy, zanim kupię was”. Akcje wzrosły o 12%.</p>
-      <blockquote>„Elegancja to umiejętność wyglądania na żywego na własnym pogrzebie.”</blockquote>
-    </div>
-  </section>
-
-  <section class="cards">
-    <div class="cards-txt">
-      <p class="kicker mono">sekcja D · etykieta</p>
-      <h2 class="headline sm">Spójrz na tę subtelną<br><em>złamaną biel.</em></h2>
-      <p class="body">Gustowna grubość. Znak wodny z czaszką. Wpisz swoje nazwisko i sprawdź, czy twoja wizytówka wytrzyma spotkanie zarządu.</p>
-      <label class="mono card-in">nazwisko:<input id="cardName" maxlength="26" value="Twoje Nazwisko" aria-label="Nazwisko na wizytówce"></label>
-      <label class="mono card-in">stanowisko:<input id="cardRole" maxlength="30" value="Dyrektor ds. Umierania" aria-label="Stanowisko"></label>
-    </div>
-    <div class="bcard-stage">
-      <div class="bcard" id="bcard">
-        <img src="assets/img/skull.png" class="bc-wm" alt="">
-        <span class="bc-phone mono">+48 012 666 012</span>
-        <span class="bc-co">DEAD12 CAPITAL</span>
-        <div class="bc-mid">
-          <b id="bcName">Twoje Nazwisko</b>
-          <i id="bcRole">Dyrektor ds. Umierania</i>
-        </div>
-        <span class="bc-addr mono">Al. Nieboszczyków 12 · Sopot · Dział Fuzji i Pochówków</span>
-      </div>
-    </div>
-  </section>
-
-  <section class="on-sub">
-    <p class="kicker mono">prenumerata</p>
-    <h2 class="headline sm">Raport kwartalny <em>na skrzynkę.</em></h2>
-    <form class="sub-form on" data-sub>
-      <input type="email" required placeholder="prezes@twojafirma.pl" aria-label="E-mail">
-      <button type="submit">podpisz</button>
+  <!-- ============ DROP 02 ============ -->
+  <section class="d02" id="drop02">
+    <p class="pix muted">następny drop</p>
+    <h2>drop 02</h2>
+    <div class="cd" id="cd02" aria-live="off"><span><b>--</b>dni</span><span><b>--</b>godz</span><span><b>--</b>min</span><span><b>--</b>sek</span></div>
+    <p class="muted">lista dostaje dostęp 24 h wcześniej. zero spamu, tylko drop.</p>
+    <form class="sub" data-sub>
+      <input type="email" required placeholder="twoj@mail.pl" aria-label="E-mail" autocomplete="email">
+      <button type="submit">zapisz mnie</button>
     </form>
-    <p class="tomb-msg mono" aria-live="polite"></p>
+    <p class="sub-msg" aria-live="polite"></p>
+  </section>
+</main>
+
+
+<!-- ============ TRY-ON (opens on box click) ============ -->
+<div class="tryon" id="tryon" hidden role="dialog" aria-modal="true" aria-label="Przymierzalnia 3D">
+  <div class="tryon-bar">
+    <span class="pix"><span class="dot"></span>przymierzalnia 3D</span>
+    <button class="x" id="tryClose" aria-label="Zamknij przymierzalnię">×</button>
+  </div>
+  <div class="tryon-body" id="tryonBody">
+  <!-- ============ DROP 01 · 3D try-on + buy ============ -->
+  <section class="pdp" id="pdp" aria-label="Przymierzalnia 3D">
+    <div class="stage" id="stage">
+      <div class="stage-frame" aria-hidden="true"></div>
+      <canvas id="viewer" aria-label="Lalka dead12 w wybranej bluzie — przeciągnij, aby obrócić o 360°"></canvas>
+      <div class="stage-load" id="stageLoad"><span class="pix">ubieranie lalki…</span><i><b id="loadPct"></b></i></div>
+      <p class="stage-hint pix" id="stageHint"><span>⟲</span> przeciągnij · 360°</p>
+      <div class="stage-ctl" role="group" aria-label="widok">
+        <button data-view="front" aria-pressed="true">przód</button>
+        <button data-view="side">bok</button>
+        <button data-view="back">tył</button>
+        <button data-zoom aria-pressed="false" aria-label="przybliż">⤢</button>
+      </div>
+      
+    </div>
+
+    <div class="buy" id="buy">
+      <p class="kick pix"><span class="dot"></span>drop 01 · dostępny teraz</p>
+      <h1 class="p-name" id="pName">—</h1>
+      <p class="p-sub" id="pSub"></p>
+      <div class="p-price"><b id="pPrice"></b><s id="pWas"></s><span class="p-ship" id="pShip"></span></div>
+      <p class="p-desc" id="pDesc"></p>
+
+      <div class="pick">
+        <p class="lbl">rozmiar <button class="link" id="sizeGuideBtn" type="button">tabela rozmiarów</button></p>
+        <div class="sizes" id="sizes" role="radiogroup" aria-label="rozmiar"></div>
+        <p class="stock" id="stock" aria-live="polite"></p>
+      </div>
+
+      <div class="ctas">
+        <button class="btn-buy" id="addBtn">dodaj do koszyka</button>
+        <button class="btn-now" id="nowBtn">kup teraz</button>
+      </div>
+      <ul class="usp">
+        <li><i>48h</i>wysyłka z Polski — InPost, DPD, kurier 24 h</li>
+        <li><i>14</i>dni na zwrot, bez tłumaczenia się</li>
+        <li><i>PLN</i>BLIK · karta · przelew · pobranie</li>
+      </ul>
+      <details class="acc"><summary>skład i pielęgnacja</summary><p>80% bawełna, 20% poliester · gramatura 450 g · zamek metalowy · nadruk sitodruk / DTF · prać na lewej stronie w 30°C, nie suszyć w suszarce.</p></details>
+      <details class="acc"><summary>jak to leży?</summary><p>Krój oversize boxy — jeśli chcesz bardziej dopasowany, weź rozmiar mniej. Lalka ma na sobie M.</p></details>
+    </div>
   </section>
 
-  <footer class="on-foot mono">
-    <img src="assets/img/dead12-block.png" alt="DEAD12" class="on-foot-big">
-    <p>Inwestowanie w odzież dead12 wiąże się z ryzykiem utraty duszy, reputacji i zainteresowania kolorem beżowym. dead12 Capital nie jest nadzorowany przez KNF ani przez nikogo żywego. © 2026.</p>
-    <div class="on-foot-row"><a href="#">regulamin</a><a href="#">zwroty</a><a href="#">relacje inwestorskie</a><a href="#">instagram</a></div>
-  </footer>
-</main>
+  <!-- mobile sticky buy bar -->
+  <div class="sbar" id="sbar" aria-hidden="true">
+    <img id="sbImg" alt="">
+    <div><b id="sbName"></b><span id="sbPrice"></span></div>
+    <button id="sbAdd">do koszyka</button>
+  </div>
+
+  </div>
+</div>
+
+<footer class="foot">
+  <img src="assets/img/dead12-block-white.png" alt="DEAD12" class="foot-big" loading="lazy">
+  <div class="foot-row">
+    <span>© 2026 dead12 · Trójmiasto</span>
+    <nav><a href="#">regulamin</a><a href="#">zwroty i reklamacje</a><a href="#">polityka prywatności</a><a href="#">kontakt</a><a href="#">instagram</a></nav>
+  </div>
+</footer>
+
+<!-- size guide -->
+<div class="modal" id="sizeModal" hidden>
+  <div class="modal-bg" data-close></div>
+  <div class="modal-box sg-box" role="dialog" aria-modal="true" aria-labelledby="sgTitle">
+    <button class="x" data-close aria-label="Zamknij">×</button>
+    <h3 id="sgTitle">tabela rozmiarów</h3>
+    <p class="muted">wymiary bluzy na płasko, w cm. krój oversize.</p>
+    <table class="sg"><thead><tr><th></th><th>XS</th><th>S</th><th>M</th><th>L</th><th>XL</th><th>XXL</th></tr></thead>
+      <tbody><tr><th>szerokość</th><td>56</td><td>59</td><td>62</td><td>65</td><td>68</td><td>71</td></tr>
+      <tr><th>długość</th><td>64</td><td>67</td><td>70</td><td>72</td><td>74</td><td>76</td></tr>
+      <tr><th>rękaw</th><td>58</td><td>60</td><td>62</td><td>64</td><td>66</td><td>67</td></tr></tbody></table>
+  </div>
+</div>
 
 <!-- ============ PRODUCT MODAL ============ -->
 <div class="modal" id="pModal" hidden>
@@ -283,7 +204,7 @@
   <div class="cart-bg" data-cclose></div>
   <div class="cart-panel" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
     <header class="cart-head">
-      <h3 id="cartTitle"><span class="cb-ona">twoja torebka</span><span class="cb-on">portfel inwestycyjny</span> <small id="cartUnits"></small></h3>
+      <h3 id="cartTitle">koszyk <small id="cartUnits"></small></h3>
       <button class="x" data-cclose aria-label="Zamknij koszyk">×</button>
     </header>
     <div class="ship-meter" id="shipMeter">
@@ -299,8 +220,8 @@
       </form>
       <p class="code-msg" id="codeMsg" aria-live="polite"></p>
       <dl class="sum" id="cartSum"></dl>
-      <button class="cart-go" id="checkoutBtn"><span class="cb-ona">do kasy, kochanie</span><span class="cb-on">zrealizuj transakcję</span></button>
-      <p class="cart-fine"><span class="cb-ona">zwrot 14 dni · wysyłka w 48 h · płatność blik / karta</span><span class="cb-on">zwrot 14 dni · rozliczenie T+2 · BLIK / karta / przelew</span></p>
+      <button class="cart-go" id="checkoutBtn">przejdź do kasy</button>
+      <p class="cart-fine">zwrot 14 dni · wysyłka w 48 h · blik / karta / przelew</p>
     </footer>
   </div>
 </aside>
@@ -310,7 +231,7 @@
   <div class="co-shell" role="dialog" aria-modal="true" aria-labelledby="coTitle">
     <header class="co-top">
       <button class="co-back" id="coBack" aria-label="Wstecz">←</button>
-      <h3 id="coTitle"><span class="cb-ona">kasa zza grobu</span><span class="cb-on">formularz zlecenia</span></h3>
+      <h3 id="coTitle">kasa zza grobu</h3>
       <ol class="co-steps" id="coSteps">
         <li data-s="1"><b>1</b><span>dane</span></li>
         <li data-s="2"><b>2</b><span>dostawa</span></li>
@@ -324,7 +245,7 @@
       <form class="co-main" id="coForm" novalidate>
         <!-- step 1 -->
         <section class="co-step" data-step="1">
-          <h4><span class="cb-ona">kto odbierze trumnę?</span><span class="cb-on">dane kontrahenta</span></h4>
+          <h4>dokąd wysyłamy?</h4>
           <div class="f-grid">
             <label class="f f-2">e-mail<input name="email" type="email" autocomplete="email" inputmode="email" required><em></em></label>
             <label class="f">imię i nazwisko<input name="name" autocomplete="name" required><em></em></label>
@@ -333,11 +254,11 @@
             <label class="f f-s">kod pocztowy<input name="zip" autocomplete="postal-code" inputmode="numeric" placeholder="00-000" maxlength="6" required><em></em></label>
             <label class="f">miasto<input name="city" autocomplete="address-level2" required><em></em></label>
           </div>
-          <label class="chk"><input type="checkbox" name="newsletter"><span><span class="cb-ona">zapisz mnie do klubu fanek (drop 02 pierwsza)</span><span class="cb-on">chcę otrzymywać raport kwartalny (newsletter)</span></span></label>
+          <label class="chk"><input type="checkbox" name="newsletter"><span>zapisz mnie na listę drop 02 (dostęp 24 h wcześniej)</span></label>
         </section>
         <!-- step 2 -->
         <section class="co-step" data-step="2">
-          <h4><span class="cb-ona">jak ma przyjechać?</span><span class="cb-on">metoda dostawy</span></h4>
+          <h4>jak ma przyjechać?</h4>
           <div class="opts" id="shipOpts"></div>
           <label class="f locker" id="lockerBox" hidden>kod paczkomatu
             <input name="locker" placeholder="np. GDY01M" autocapitalize="characters" spellcheck="false"><em></em>
@@ -347,14 +268,14 @@
         </section>
         <!-- step 3 -->
         <section class="co-step" data-step="3">
-          <h4><span class="cb-ona">czym płacisz, kochanie?</span><span class="cb-on">instrument płatniczy</span></h4>
+          <h4>czym płacisz?</h4>
           <div class="opts" id="payOpts"></div>
           <label class="chk req"><input type="checkbox" name="terms" required><span>akceptuję <a href="#" target="_blank">regulamin</a> i <a href="#" target="_blank">politykę prywatności</a></span></label>
           <p class="co-err" id="termsErr"></p>
         </section>
         <!-- step 4 -->
         <section class="co-step" data-step="4">
-          <h4><span class="cb-ona">sprawdź, zanim pochowamy</span><span class="cb-on">weryfikacja zlecenia</span></h4>
+          <h4>sprawdź, zanim pochowamy</h4>
           <div class="review" id="review"></div>
           <p class="co-err" id="placeErr" aria-live="assertive"></p>
         </section>
@@ -374,27 +295,19 @@
     </div>
 
     <div class="co-done" id="coDone" hidden>
-      <img src="assets/img/star-pink.png" alt="" class="cb-ona-img done-star">
-      <img src="assets/img/skull.png" alt="" class="cb-on-img done-skull">
-      <p class="pix done-k"><span class="cb-ona">zamówienie wykopane</span><span class="cb-on">transakcja zaksięgowana</span></p>
+      <img src="assets/img/star-pink.png" alt="" class="done-star">
+      <p class="pix done-k">zamówienie wykopane</p>
       <h3 id="doneNo"></h3>
       <p id="doneMsg"></p>
       <div class="review" id="doneReview"></div>
-      <button class="cart-go" id="doneBack"><span class="cb-ona">wracam do trumny</span><span class="cb-on">powrót na parkiet</span></button>
+      <button class="cart-go" id="doneBack">wracam do sklepu</button>
     </div>
   </div>
 </div>
 
-<!-- ============ MODE TRANSITION ============ -->
-<div id="shutter" aria-hidden="true">
-  <div class="sh-bars"></div>
-  <div class="sh-word"></div>
-</div>
 
-<!-- ============ CURSOR ============ -->
-<div id="cur" aria-hidden="true"><i class="c-dot"></i><span class="c-read mono"></span></div>
+
 <div id="toast" role="status"><span id="toastTxt"></span><button id="toastAct" hidden></button></div>
-
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

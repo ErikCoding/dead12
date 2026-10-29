@@ -62,12 +62,11 @@
       <div class="grid2">
         <article class="card wide">
           <header class="card-h"><h3>przychód dzienny</h3>
-            <div class="legend"><span><i style="--c:var(--c-ona)"></i>ONA</span><span><i style="--c:var(--c-on)"></i>ON</span></div>
           </header>
           <div class="chart" id="revChart"></div>
           <details class="tbl-view"><summary>pokaż jako tabelę</summary><div id="revTable"></div></details>
         </article>
-        <article class="card"><header class="card-h"><h3>ONA vs ON</h3></header><div id="split"></div></article>
+        <article class="card"><header class="card-h"><h3>dziś vs średnia</h3></header><div id="split"></div></article>
         <article class="card"><header class="card-h"><h3>bestsellery</h3></header><div id="top"></div></article>
         <article class="card"><header class="card-h"><h3>rozmiary</h3></header><div id="sizes"></div></article>
         <article class="card"><header class="card-h"><h3>płatność i dostawa</h3></header><div id="methods"></div></article>
@@ -80,7 +79,7 @@
     <section class="view" data-v="orders">
       <div class="toolbar">
         <input type="search" id="oSearch" placeholder="szukaj: nr, klient, e-mail, miasto…" aria-label="szukaj zamówień">
-        <div class="seg" id="oMode"><button data-m="all" aria-pressed="true">wszystkie</button><button data-m="ona">ONA</button><button data-m="on">ON</button></div>
+        <div class="seg" id="oMode" hidden><button data-m="all" aria-pressed="true">wszystkie</button></div>
       </div>
       <div class="chips" id="oStatus"></div>
       <div class="otable" id="oTable"></div>
@@ -169,7 +168,7 @@
     </div>
     <div class="row">
       <label class="fld">limit użyć (0 = bez)<input name="limit" type="number" min="0" step="1" value="0"></label>
-      <label class="fld">strefa<select name="mode"><option value="all">obie</option><option value="ona">tylko ONA</option><option value="on">tylko ON</option></select></label>
+      <input type="hidden" name="mode" value="all">
       <label class="fld">wygasa<input name="expires" type="date"></label>
     </div>
     <label class="fld">notatka<input name="note" maxlength="120"></label>

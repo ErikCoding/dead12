@@ -1,0 +1,20 @@
+<!doctype html><html lang="pl"><head><base href="/"><meta charset="utf-8"><title>dead12 · wypiekanie modeli 3D</title>
+<style>body{margin:0;background:#0b0a0b;color:#ece6e1;font:14px/1.5 ui-monospace,monospace;padding:30px}a{color:#ff7ab4}canvas{position:fixed;right:20px;bottom:20px;width:200px;height:300px;border:1px solid #333}</style></head>
+<body><h1>wypiekanie bluz do pudełek</h1>
+<p>Ta strona ubiera lalkę w każdą bluzę z <code>js/products.js</code> (te z polem <code>garment</code>) i zapisuje samą bluzę jako mały plik GLB.
+Pobrane pliki wrzuć do <code>assets/model/</code> i wpisz ścieżkę w pole <code>model</code> produktu.</p>
+<ul id="out"><li>pracuję…</li></ul><canvas id="c" width="400" height="600"></canvas>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import { createViewer } from '/js/viewer.js'; import { PRODUCTS } from '/js/products.js'; import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+const v = createViewer(document.getElementById('c')); await v.ready; const out = document.getElementById('out'); out.innerHTML = '';
+window.out = {};
+for (const p of PRODUCTS.filter((p) => p.garment)) {
+  const g = await v.bake(p);
+  const buf = await new GLTFExporter().parseAsync(g, { binary: true, maxTextureSize: 1024 });
+  const url = URL.createObjectURL(new Blob([buf], { type: 'model/gltf-binary' }));
+  const b = new Uint8Array(buf); let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); window.out[p.id] = btoa(s);
+  out.insertAdjacentHTML('beforeend', `<li><a href="${url}" download="hoodie-${p.id}.glb">hoodie-${p.id}.glb</a> · ${(buf.byteLength / 1024).toFixed(0)} KB</li>`);
+}
+document.title = 'baked';
+</script></body></html>

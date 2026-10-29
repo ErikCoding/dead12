@@ -1,4 +1,5 @@
-// dead12 — katalog. Każdy produkt ma dwie osobowości: ONA i ON.
+// dead12 — katalog. Sklep używa pól `ona` (nazwy/opisy) — `on` zostaje tylko dla zgodności ze starymi zamówieniami.
+// `garment` = jak zdjęcie bluzy jest nakładane na lalkę 3D (crop przodu, x zamka, kolory rękawów/ściągaczy).
 // Dodając nowy produkt, wystarczy dopisać obiekt do tablicy.
 export const PRODUCTS = [
   {
@@ -6,6 +7,10 @@ export const PRODUCTS = [
     img: 'assets/img/hoodie-stars.png',
     price: 349,
     sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    // 3D: how the photo is wrapped on the doll (crop = torso front in the PNG, zip = x of the zipper)
+    model: 'assets/model/hoodie-stars.glb', // mały model do pudełka (wypieczony z przymierzalni: _dev/bake)
+    garment: { img: 'assets/img/hoodie-stars.png', front: [120, 330, 580, 1050], zip: 350, frontTop: 0.985, frontBottom: 0.0,
+      base: '#201724', sleeve: '#231c27', rib: '#1a141c', hood: '#1f1722', hoodIn: '#2a2230', cord: '#d8d2cc', backLogo: 'assets/img/logo-dark.png' },
     ona: {
       name: 'gwiazdkowa trumna',
       kicker: 'zip hoodie · 450 g · czarna',
@@ -25,6 +30,9 @@ export const PRODUCTS = [
     img: 'assets/img/hoodie-plaid.png',
     price: 389,
     sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    model: 'assets/model/hoodie-plaid.glb',
+    garment: { img: 'assets/img/hoodie-plaid.png', front: [130, 350, 690, 985], zip: 410, frontTop: 0.985, frontBottom: 0.0,
+      pattern: [500, 320, 660, 460], base: '#4e5d6f', sleeve: '#1a55a8', rib: '#1d3f7b', hood: '#1a55a8', hoodIn: '#e1ceca', cord: '#e1ceca', backLogo: 'assets/img/logo-color.png' },
     ona: {
       name: 'kratka wdowy',
       kicker: 'zip hoodie · krata + kobalt',
