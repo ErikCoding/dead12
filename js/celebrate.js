@@ -16,7 +16,7 @@ function burst(canvas) {
   let W = 0, H = 0, list = [], raf = 0, last = performance.now();
   const size = () => { W = canvas.clientWidth; H = canvas.clientHeight; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
   size(); addEventListener('resize', size);
-  const skull = new Image(); skull.src = 'assets/img/skull-white.png';
+  const skull = new Image(); skull.src = 'assets/img/m/skull-white.webp';
   const star = (r) => { ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.42 : r; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); };
   function frame(now) {
     const dt = Math.min(0.04, (now - last) / 1000); last = now;
@@ -60,7 +60,7 @@ function barcode(id) {
 
 function markup(order, imgs) {
   const c = order.customer || {};
-  const items = (imgs.length ? imgs : ['assets/img/skull-white.png']).slice(0, 4)
+  const items = (imgs.length ? imgs : ['assets/img/m/skull-white.webp']).slice(0, 4)
     .map((src, i) => `<div class="mb-item" style="--i:${i}"><img src="${esc(src)}" alt=""></div>`).join('');
   const qty = (order.items || []).reduce((a, i) => a + i.q, 0);
   return `
@@ -73,7 +73,7 @@ function markup(order, imgs) {
       <div class="mb-f mb-left"><span>dead12</span></div>
       <div class="mb-f mb-right"><span>handle with dread</span></div>
       ${items}
-      <div class="mb-f mb-front"><span class="mb-logo"><img src="assets/img/logo-dark.png" alt=""></span><i class="mb-skl"></i></div>
+      <div class="mb-f mb-front"><span class="mb-logo"><img src="assets/img/m/logo-dark.webp" alt=""></span><i class="mb-skl"></i></div>
       <div class="mb-hinge"><div class="mb-lid">
         <div class="mb-face mb-lid-out">
           <div class="mb-tape"><span>dead12 ✶ dead12 ✶ dead12 ✶ dead12 ✶</span></div>
@@ -84,7 +84,7 @@ function markup(order, imgs) {
             <div class="mb-l-id">${esc(order.id)}<span>${qty} szt.</span></div>
           </div>
         </div>
-        <div class="mb-face mb-lid-in"><img src="assets/img/skull-white.png" alt=""><span>dzięki, że kupujesz u umarłych</span></div>
+        <div class="mb-face mb-lid-in"><img src="assets/img/m/skull-white.webp" alt=""><span>dzięki, że kupujesz u umarłych</span></div>
         <div class="mb-flap"><div class="mb-face mb-flap-out"><div class="mb-tape mb-tape2"></div></div><div class="mb-face mb-flap-in"></div></div>
       </div>
     </div></div></div><div class="mb-shadow"></div></div>

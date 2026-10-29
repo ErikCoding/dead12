@@ -1,5 +1,6 @@
 // dead12 — koszyk + 4-krokowa kasa. Kwoty liczy zawsze api.quote (serwer albo core lokalnie).
 import * as api from './api.js';
+const thumb = (s) => String(s || '').replace(/assets\/img\/(hoodie-stars|hoodie-plaid|stickers)\.png$/, 'assets/img/m/$1.webp');
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -58,8 +59,8 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
     $('#cartUnits').textContent = count() ? `(${count()})` : '';
     if (!state.items.length) {
       list.innerHTML = `<li class="cart-empty">${m === 'ona'
-        ? '<img src="assets/img/skull-white.png" alt="">pusto jak w trumnie po zmartwychwstaniu.<a href="#kolekcja" data-cclose>zobacz kolekcję →</a>'
-        : '<img src="assets/img/skull.png" alt="">brak otwartych pozycji.<a href="#on-market" data-cclose>przejdź na parkiet →</a>'}</li>`;
+        ? '<img src="assets/img/m/skull-white.webp" alt="">pusto jak w trumnie po zmartwychwstaniu.<a href="#kolekcja" data-cclose>zobacz kolekcję →</a>'
+        : '<img src="assets/img/m/skull.webp" alt="">brak otwartych pozycji.<a href="#on-market" data-cclose>przejdź na parkiet →</a>'}</li>`;
     } else {
       list.innerHTML = state.items.map((l) => {
         const p = P[l.id]; const st = stockOf(l.id, l.size);
@@ -69,7 +70,7 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
         }).join('')}</select>` : '<span class="ci-one">one size</span>';
         const low = st <= (S().lowStock || 3) ? `<span class="ci-low">${st <= 0 ? 'wyprzedane' : `zostało ${st} szt.`}</span>` : '';
         return `<li data-key="${esc(lineKey(l))}">
-          <img src="${esc(p.img)}" alt="">
+          <img src="${esc(thumb(p.img))}" alt="">
           <div class="ci-body">
             <div class="ci-n">${esc(m === 'ona' ? p.ona.name : p.on.name)}</div>
             <div class="ci-m">${m === 'on' ? esc(p.on.ticker) + ' · ' : ''}${sizes}${low}</div>
@@ -101,7 +102,7 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
     const upEl = $('#upsell');
     if (up && state.items.length) {
       upEl.hidden = false;
-      upEl.innerHTML = `<img src="${esc(up.img)}" alt=""><div><small>${m === 'ona' ? 'pasuje do zestawu' : 'dywersyfikacja portfela'}</small><b>${esc(m === 'ona' ? up.ona.name : up.on.name)}</b><span>${fmt(up.price)}</span></div>
+      upEl.innerHTML = `<img src="${esc(thumb(up.img))}" alt=""><div><small>${m === 'ona' ? 'pasuje do zestawu' : 'dywersyfikacja portfela'}</small><b>${esc(m === 'ona' ? up.ona.name : up.on.name)}</b><span>${fmt(up.price)}</span></div>
         <button data-up="${esc(up.id)}" aria-label="dodaj">${up.sizes ? 'wybierz' : '+ dodaj'}</button>`;
     } else upEl.hidden = true;
 
@@ -305,7 +306,7 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
   function renderSide() {
     const m = mode();
     if (!q) return;
-    $('#coItems').innerHTML = q.lines.map((l) => `<li><img src="${esc(l.img)}" alt=""><span><b>${esc(m === 'ona' ? l.name.ona : l.name.on)}</b><small>${l.size || 'one size'} · ×${l.q}</small></span><i>${fmt(l.sum)}</i></li>`).join('');
+    $('#coItems').innerHTML = q.lines.map((l) => `<li><img src="${esc(thumb(l.img))}" alt=""><span><b>${esc(m === 'ona' ? l.name.ona : l.name.on)}</b><small>${l.size || 'one size'} · ×${l.q}</small></span><i>${fmt(l.sum)}</i></li>`).join('');
     $('#coSum').innerHTML = sumRows(q, true);
     $('#coSideTotal').textContent = fmt(q.total);
     $$('[data-ship-price]').forEach((el) => {
@@ -351,7 +352,7 @@ export function initCart({ getMode, fmt, toast, catalog, onChange }) {
     $('#doneReview').innerHTML = `<div><h5>${m === 'ona' ? 'w paczce' : 'pozycje'}</h5><p>${o.items.map((i) => `${esc(m === 'ona' ? i.name.ona : i.name.on)}${i.size ? ' · ' + i.size : ''} ×${i.q}`).join('<br>')}</p></div>
       <div><h5>razem</h5><p><b>${fmt(o.totals.total)}</b>${o.totals.discount ? `<br>w tym rabat −${fmt(o.totals.discount)}` : ''}</p></div>`;
     $('.co-body').hidden = true; $('#coDone').hidden = false; $('.co-shell').classList.add('is-done');
-    const imgs = (q?.lines || []).flatMap((l) => Array(Math.min(l.q, 2)).fill(l.img)).slice(0, 4);
+    const imgs = (q?.lines || []).flatMap((l) => Array(Math.min(l.q, 2)).fill(thumb(l.img))).slice(0, 4);
     import('./celebrate.js').then((c) => c.celebrate(m, o, imgs)).catch(() => {});
     state = { items: [], code: null }; save();
     window.dispatchEvent(new CustomEvent('d12:ordered', { detail: o }));

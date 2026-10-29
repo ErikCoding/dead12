@@ -2,6 +2,7 @@
 import { PRODUCTS as SEED, LOCKED } from './products.js';
 import * as api from './api.js';
 import { initCart } from './cart.js';
+const thumb = (s) => String(s || '').replace(/assets\/img\/(hoodie-stars|hoodie-plaid|stickers)\.png$/, 'assets/img/m/$1.webp');
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -57,7 +58,7 @@ function bootViewerSafe() {
     console.warn('3D niedostępne', e);
     // fallback: show the product photo in the stage
     $('#stage').classList.add('no3d');
-    $('#stageLoad').innerHTML = `<img src="${esc(byId(pdp.id)?.img)}" alt="" style="max-height:80%;max-width:80%">`;
+    $('#stageLoad').innerHTML = `<img src="${esc(thumb(byId(pdp.id)?.img))}" alt="" style="max-height:80%;max-width:80%">`;
   });
   return viewerBoot;
 }
@@ -114,14 +115,14 @@ function renderPdp() {
   if ($('#pickName')) $('#pickName').textContent = rest.join('·').trim();
   if ($('#swatches')) $('#swatches').innerHTML = wearables().map((w) => `
     <button class="sw" role="radio" aria-checked="${w.id === p.id}" data-pick="${esc(w.id)}" aria-label="${esc(w.ona.name)}" title="${esc(w.ona.name)}">
-      <img src="${esc(w.img)}" alt="" loading="lazy"></button>`).join('');
+      <img src="${esc(thumb(w.img))}" alt="" loading="lazy"></button>`).join('');
   if (!p.sizes) pdp.size = (p.stock?.one ?? 0) > 0 ? 'one' : null;
   $('#sizes').innerHTML = (p.sizes || ['one']).map((s) => {
     const left = p.stock?.[s] ?? 0;
     return `<button role="radio" aria-checked="${pdp.size === s}" data-size="${s}" ${left <= 0 ? 'disabled aria-disabled="true"' : ''}>${s === 'one' ? 'one size' : s}${left > 0 && left <= low() ? `<i>${left}</i>` : ''}</button>`;
   }).join('');
   updateBuy();
-  $('#sbImg').src = p.img; $('#sbName').textContent = p.ona.name; $('#sbPrice').textContent = fmt(p.price);
+  $('#sbImg').src = thumb(p.img); $('#sbName').textContent = p.ona.name; $('#sbPrice').textContent = fmt(p.price);
 }
 function updateBuy() {
   const p = byId(pdp.id), sold = total(p) <= 0, btn = $('#addBtn');
@@ -189,10 +190,10 @@ async function renderBoxes() {
           <div class="cf-back" aria-hidden="true"></div>
           <div class="cf-win">
             <canvas aria-label="${esc(p.ona.name)} — przeciągnij, aby obrócić${p.garment ? ', kliknij, aby przymierzyć' : ''}"></canvas>
-            <img class="bx-fallback" src="${esc(p.img)}" alt="" loading="lazy">
+            <img class="bx-fallback" src="${esc(thumb(p.img))}" alt="" loading="lazy">
           </div>
           ${rings(FRAME)}
-          <div class="cf-lid" aria-hidden="true">${frontSvg(FRAME)}<span class="cf-glass"></span><img class="cf-skl" src="assets/img/skull-white.png" alt=""></div>
+          <div class="cf-lid" aria-hidden="true">${frontSvg(FRAME)}<span class="cf-glass"></span><img class="cf-skl" src="assets/img/m/skull-white.webp" alt=""></div>
           ${flag}
         </div>
         <div class="cf-shadow" aria-hidden="true"></div>
@@ -210,7 +211,7 @@ async function renderBoxes() {
       <div class="cf-stage"><div class="cf">
         ${rings(SOLID)}
         <div class="cf-lid">${frontSvg(SOLID, false)}
-          <div class="seal-in"><img src="assets/img/skull-white.png" alt=""><span class="frak">${esc(LOCKED.ona.title)}</span><b data-countdown="${LOCKED.ona.date}">—</b></div>
+          <div class="seal-in"><img src="assets/img/m/skull-white.webp" alt=""><span class="frak">${esc(LOCKED.ona.title)}</span><b data-countdown="${LOCKED.ona.date}">—</b></div>
           <span class="tape-x" aria-hidden="true">nie otwierać ✶ nie otwierać ✶ nie otwierać</span>
         </div>
       </div><div class="cf-shadow" aria-hidden="true"></div></div>
@@ -226,10 +227,19 @@ async function renderBoxes() {
     st.addEventListener('pointerleave', () => { st.style.removeProperty('--ry'); st.style.removeProperty('--rx'); });
   });
   reveal();
-  try {
-    if (!boxesApi) { const { createBoxes } = await import('./boxes.js'); boxesApi = createBoxes({ onOpen: (id) => { const p = byId(id); p?.garment ? openTryon(id) : openProduct(id); } }); }
-    $$('.box[data-box]', wrap).forEach((el) => boxesApi.add(el, byId(el.dataset.box)));
-  } catch (e) { console.warn('3D w pudełkach niedostępne', e); wrap.classList.add('no3d'); }
+  // silnik 3D dociągamy dopiero, gdy trumienki zbliżają się do ekranu
+  const go3d = async () => {
+    try {
+      if (!boxesApi) { const { createBoxes } = await import('./boxes.js'); boxesApi = createBoxes({ onOpen: (id) => { const p = byId(id); p?.garment ? openTryon(id) : openProduct(id); } }); }
+      $$('.box[data-box]', wrap).forEach((el) => boxesApi.add(el, byId(el.dataset.box)));
+    } catch (e) { console.warn('3D w trumienkach niedostępne', e); wrap.classList.add('no3d'); }
+  };
+  if (boxesApi) return go3d();
+  const coarse = matchMedia('(pointer:coarse)').matches;
+  const io = new IntersectionObserver((ens) => { if (ens.some((e) => e.isIntersecting)) { io.disconnect(); go3d(); } }, { rootMargin: coarse ? '250px 0px' : '900px 0px' });
+  // telefon: nic ciężkiego, dopóki ktoś nie zacznie przewijać
+  if (coarse && scrollY < 40) addEventListener('scroll', () => io.observe(wrap), { once: true, passive: true });
+  else io.observe(wrap);
 }
 $('#boxes').addEventListener('click', (e) => {
   const q = e.target.closest('[data-quick]'), a = e.target.closest('[data-quickadd]');
@@ -246,7 +256,7 @@ let current = null, chosen = null;
 function openProduct(id) {
   const p = byId(id); if (!p) return;
   current = p; chosen = p.sizes ? null : 'one';
-  $('#pmImg').src = p.img; $('#pmImg').alt = p.ona.name;
+  $('#pmImg').src = thumb(p.img); $('#pmImg').alt = p.ona.name;
   $('#pmKicker').textContent = p.ona.kicker;
   $('#pmName').textContent = p.ona.name;
   $('#pmPrice').innerHTML = `${p.compareAt ? `<s class="pm-was">${fmt(p.compareAt)}</s> ` : ''}${fmt(p.price)}`;
@@ -316,7 +326,24 @@ let booted = false;
 renderAll();
 setInterval(countdowns, 1000);
 // hero 3D
-import('./hero.js').then(({ createHero }) => createHero($('#heroCanvas'))).then(() => $('.hero').classList.add('live')).catch((e) => console.warn('hero 3D', e));
+// telefon: lekki kolaż zamiast czaszki 3D (bez ładowania three.js na starcie)
+if (matchMedia('(max-width:860px)').matches) {
+  const hc = document.createElement('div');
+  hc.className = 'hero-col';
+  hc.innerHTML = `<span class="hc-glow"></span>
+    <span class="hc-word frak" aria-hidden="true">dead</span>
+    <button class="hc-item hc-plaid" data-tryon="plaid" aria-label="Przymierz Kratkę Wdowy"><img src="assets/img/m/hoodie-plaid.webp" alt="" fetchpriority="high"></button>
+    <button class="hc-item hc-stars" data-tryon="stars" aria-label="Przymierz Gwiazdkową Trumnę"><img src="assets/img/m/hoodie-stars.webp" alt="" fetchpriority="high"></button>
+    <img class="hc-skull" src="assets/img/m/skull-white.webp" alt="">
+    <img class="hc-st a" src="assets/img/m/star-pink.webp" alt=""><img class="hc-st b" src="assets/img/m/star-pink.webp" alt=""><img class="hc-st c" src="assets/img/m/star-pink.webp" alt="">
+    <button class="hc-stamp" data-tryon aria-label="Przymierz na lalce 3D">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><defs><path id="hcC" d="M50 50m-38 0a38 38 0 1 1 76 0a38 38 0 1 1-76 0"/></defs>
+      <text><textPath href="#hcC">przymierz na lalce ✶ 3D ✶ przymierz na lalce ✶ 3D ✶</textPath></text></svg><b>3D</b></button>`;
+  $('#heroCanvas').replaceWith(hc);
+  $('.hero').classList.add('static');
+} else {
+  import('./hero.js').then(({ createHero }) => createHero($('#heroCanvas'))).then(() => $('.hero').classList.add('live')).catch((e) => console.warn('hero 3D', e));
+}
 reveal();
 loadCatalog();
 window.addEventListener('d12:ordered', loadCatalog);

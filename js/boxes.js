@@ -45,8 +45,8 @@ export function createBoxes({ onOpen } = {}) {
   }
 
   async function flatModel(p) {
-    const front = await texLoader.loadAsync(p.img); front.colorSpace = THREE.SRGBColorSpace;
-    const back = await texLoader.loadAsync('assets/img/logo-dark.png'); back.colorSpace = THREE.SRGBColorSpace;
+    const front = await texLoader.loadAsync(String(p.img).replace(/assets\/img\/(\w[\w-]*)\.png$/, 'assets/img/m/$1.webp')); front.colorSpace = THREE.SRGBColorSpace;
+    const back = await texLoader.loadAsync('assets/img/m/logo-dark.webp'); back.colorSpace = THREE.SRGBColorSpace;
     const ar = front.image.width / front.image.height, w = 0.82, h = w / ar;
     const g = new THREE.Group();
     const card = new THREE.Mesh(new THREE.BoxGeometry(w + 0.05, h + 0.05, 0.02), new THREE.MeshStandardMaterial({ color: 0x17141a, roughness: 0.5 }));
@@ -82,7 +82,7 @@ export function createBoxes({ onOpen } = {}) {
     io.observe(el); near.observe(el);
   }
   // load the doll a little before the boxes scroll into view
-  const near = new IntersectionObserver((ens) => { if (ens.some((e) => e.isIntersecting)) { ensureRig(); near.disconnect(); } }, { rootMargin: '600px' });
+  const near = new IntersectionObserver((ens) => { if (ens.some((e) => e.isIntersecting)) { ensureRig(); near.disconnect(); } }, { rootMargin: coarse ? '120px 0px' : '600px' });
   const io = new IntersectionObserver((ens) => {
     for (const en of ens) { const b = boxes.find((x) => x.el === en.target); if (b) b.visible = en.isIntersecting; }
     kick();

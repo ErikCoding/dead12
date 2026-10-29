@@ -79,6 +79,8 @@ function ringAt(curve, t, r, tube, mat) {
 /* ---------------- textures from the product photo ---------------- */
 const imgCache = new Map();
 function loadImg(src) {
+  // lżejsze odpowiedniki: pełnowymiarowe WebP bluz (te same piksele) i małe logo na plecy
+  src = String(src).replace(/assets\/img\/(hoodie-stars|hoodie-plaid)\.png$/, 'assets/img/$1.webp').replace(/assets\/img\/(logo-dark|logo-color)\.png$/, 'assets/img/m/$1.webp');
   if (!imgCache.has(src)) imgCache.set(src, new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }));
   return imgCache.get(src);
 }
