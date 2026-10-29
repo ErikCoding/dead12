@@ -1,0 +1,73 @@
+/* ==========================================================
+   dead12 — animacja po zakupie (js/celebrate.js)
+   ========================================================== */
+.cel{position:fixed;inset:0;z-index:400;display:grid;place-items:center;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cel-fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+.cel-stage{position:relative;z-index:2;display:grid;place-items:center;width:100%;height:100%}
+.cel-title{position:absolute;left:0;right:0;bottom:max(12vh,90px);text-align:center;opacity:0;padding:0 20px}
+.cel-title p{margin:0}
+.cel-title h2{margin:6px 0 8px;line-height:.95}
+.cel-skip{position:absolute;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:4;margin:0;text-align:center;font-size:10px;opacity:.45;letter-spacing:.14em;text-transform:uppercase}
+
+/* ---------- ONA: coffin ---------- */
+.cel-ona{background:radial-gradient(circle at 50% 42%,rgba(255,10,132,.45),transparent 55%),rgba(13,6,12,.94);color:#ffd6ea}
+.cel-ona .cel-skip{font-family:var(--pix)}
+.coffin{--w:min(300px,64vw);position:relative;width:var(--w);aspect-ratio:3/4.2;margin-top:-10vh}
+.coffin-box,.coffin-lid{position:absolute;inset:0;clip-path:polygon(28% 0,72% 0,100% 24%,86% 100%,14% 100%,0 24%)}
+.coffin-box{background:#0d060c;padding:9px}
+.coffin-in{width:100%;height:100%;clip-path:inherit;background:
+  repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 6px,transparent 6px 12px),
+  radial-gradient(circle at 50% 40%,#ff74b8,#ff0a84 45%,#8f0049)}
+.coffin-items{position:absolute;inset:18% 16% 14%;display:grid;place-items:center}
+.coffin-items img{position:absolute;width:62%;height:auto;object-fit:contain;filter:drop-shadow(0 10px 14px rgba(0,0,0,.6));opacity:0}
+.coffin-lid{z-index:2;display:grid;place-items:center;opacity:0;
+  background:
+    linear-gradient(90deg,transparent 46%,#ffd6ea 46% 54%,transparent 54%) 0 18%/100% 52% no-repeat,
+    linear-gradient(0deg,transparent 60%,#ffd6ea 60% 66%,transparent 66%) 0 0/100% 50% no-repeat,
+    repeating-linear-gradient(135deg,rgba(255,255,255,.08) 0 8px,transparent 8px 16px),
+    linear-gradient(180deg,#ff3d9d,#c4006a);
+  box-shadow:inset 0 0 0 6px #0d060c}
+.coffin-lid img{position:absolute;bottom:14%;width:58%;filter:drop-shadow(2px 2px 0 #0d060c)}
+.cel-stamp{position:absolute;left:50%;top:48%;z-index:3;opacity:0;padding:12px 18px;font-size:clamp(16px,4.5vw,22px);color:#0d060c;background:#e3efcf;
+  border:4px solid #0d060c;border-radius:12px;white-space:nowrap;box-shadow:6px 6px 0 #0d060c;transform:translate(-50%,-50%)}
+.cel-ona .cel-title p{font-family:var(--pix);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#ff74b8}
+.cel-ona .cel-title h2{font-family:"Bagel Fat One",system-ui;font-weight:400;font-size:clamp(56px,14vw,120px);color:#ffd6ea;
+  -webkit-text-stroke:3px #0d060c;paint-order:stroke fill;text-shadow:0 5px 0 #ff0a84,0 10px 0 #8f0049,0 0 40px rgba(255,10,132,.7)}
+.cel-ona .cel-sum{font-family:"Mansalva",cursive;font-size:22px}
+
+/* ---------- ON: deal ---------- */
+.cel-on{background:radial-gradient(circle at 50% 40%,#1d3b2e,#0b120e 70%);color:#efe1cd}
+.cel-on .cel-skip{font-family:var(--mono)}
+.deal{position:relative;width:min(640px,90vw);margin-top:-12vh;padding:22px 22px 18px;border:1.5px solid rgba(230,194,122,.5);background:rgba(10,18,14,.6);
+  box-shadow:0 0 0 6px rgba(10,18,14,.6),0 0 0 7px rgba(230,194,122,.25),0 30px 80px rgba(0,0,0,.6)}
+.deal-k{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:#e6c27a}
+.deal-chart{display:block;width:100%;height:clamp(150px,30vh,230px);overflow:visible}
+.deal-chart .dg{stroke:rgba(239,225,205,.1);stroke-width:1}
+.deal-chart .dl{fill:none;stroke:#e6c27a;stroke-width:3;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 0 8px rgba(230,194,122,.6))}
+.deal-chart .dc rect{transform-box:fill-box;transform-origin:bottom}
+.deal-chart .dp{fill:#7fe0a8;filter:drop-shadow(0 0 10px #7fe0a8)}
+.deal-num{margin-top:12px;font-size:clamp(28px,6vw,46px);font-weight:600;letter-spacing:-.01em}
+.deal-num .up{color:#7fe0a8;font-size:.7em}
+.deal-num b{font-variant-numeric:tabular-nums}
+.seal{position:absolute;left:78%;top:58%;width:clamp(130px,30vw,190px);aspect-ratio:1;opacity:0;transform:translate(-50%,-50%);filter:drop-shadow(0 12px 18px rgba(0,0,0,.55))}
+.seal svg{width:100%;height:100%;overflow:visible}
+.seal-wax{fill:#9c1420}
+.seal-in{fill:#b51a27;stroke:#6e0b14;stroke-width:4}
+.seal-t{font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.12em;fill:#f3cfa0}
+.seal-skull{filter:invert(.92) sepia(.6) saturate(2) hue-rotate(-10deg) opacity(.85)}
+.cel-on .cel-title p{font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#e6c27a}
+.cel-on .cel-title h2{font-family:"Bodoni Moda",serif;font-style:italic;font-weight:600;font-size:clamp(52px,12vw,110px);letter-spacing:-.03em;color:#efe1cd}
+.cel-on .cel-sum{font-family:var(--mono);font-size:15px;letter-spacing:.06em}
+
+@media (max-width:640px){
+  .coffin{margin-top:-16vh}
+  .deal{margin-top:-18vh;padding:16px 14px 14px}
+  .seal{left:74%;top:66%}
+  .cel-title{bottom:max(10vh,70px)}
+}
+/* layout: ON keeps the deal card, title goes under it; ONA title takes the centre after the coffin is gone */
+.cel-on .cel-stage{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:clamp(18px,4vh,36px);padding:20px 16px 60px}
+.cel-on .deal{margin-top:0}
+.cel-on .cel-title{position:static}
+.cel-ona .cel-title{bottom:auto;top:50%;translate:0 -50%}
+@media (max-width:640px){ .cel-on .deal{margin-top:0} }

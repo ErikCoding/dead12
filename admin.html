@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0e0c0f">
+<title>Kostnica · panel dead12</title>
+<link rel="icon" href="assets/img/skull-white.png">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<section id="login" class="login" hidden>
+  <form class="login-box" id="loginForm">
+    <img src="assets/img/logo-dark.png" alt="dead12" class="login-logo">
+    <h1 class="frak">Kostnica</h1>
+    <p class="pix muted">panel administracyjny · wstęp tylko dla personelu</p>
+    <label class="fld">hasło<input type="password" id="pw" autocomplete="current-password" required autofocus></label>
+    <button class="btn pri" type="submit">otwórz chłodnię</button>
+    <p class="err" id="loginErr" aria-live="assertive"></p>
+    <p class="muted small" id="loginHint"></p>
+  </form>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="app" class="app" hidden>
+  <aside class="side">
+    <a class="side-brand" href="./admin.html"><img src="assets/img/logo-dark.png" alt="dead12"><span class="frak">Kostnica</span></a>
+    <nav class="nav" id="nav">
+      <button data-view="dash"><i>◉</i><span>pulpit</span></button>
+      <button data-view="orders"><i>☰</i><span>zamówienia</span><b id="navOrders"></b></button>
+      <button data-view="codes"><i>%</i><span>kody</span></button>
+      <button data-view="products"><i>▦</i><span>produkty</span><b id="navStock"></b></button>
+      <button data-view="settings"><i>⚙</i><span>ustawienia</span></button>
+    </nav>
+    <div class="side-foot">
+      <span class="chip" id="backendChip"></span>
+      <a href="./" target="_blank" class="side-link">otwórz sklep ↗</a>
+      <button class="side-link" id="logout">wyloguj</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="top">
+      <div>
+        <p class="pix muted" id="viewKicker"></p>
+        <h2 id="viewTitle"></h2>
+      </div>
+      <div class="top-act" id="topAct"></div>
+    </header>
+
+    <!-- dashboard -->
+    <section class="view" data-v="dash">
+      <div class="seg" id="range" role="radiogroup" aria-label="zakres">
+        <button data-d="7">7 dni</button><button data-d="30" aria-pressed="true">30 dni</button><button data-d="90">90 dni</button><button data-d="365">rok</button>
+      </div>
+      <div class="kpis" id="kpis"></div>
+      <div class="alerts" id="alerts"></div>
+      <div class="grid2">
+        <article class="card wide">
+          <header class="card-h"><h3>przychód dzienny</h3>
+            <div class="legend"><span><i style="--c:var(--c-ona)"></i>ONA</span><span><i style="--c:var(--c-on)"></i>ON</span></div>
+          </header>
+          <div class="chart" id="revChart"></div>
+          <details class="tbl-view"><summary>pokaż jako tabelę</summary><div id="revTable"></div></details>
+        </article>
+        <article class="card"><header class="card-h"><h3>ONA vs ON</h3></header><div id="split"></div></article>
+        <article class="card"><header class="card-h"><h3>bestsellery</h3></header><div id="top"></div></article>
+        <article class="card"><header class="card-h"><h3>rozmiary</h3></header><div id="sizes"></div></article>
+        <article class="card"><header class="card-h"><h3>płatność i dostawa</h3></header><div id="methods"></div></article>
+        <article class="card"><header class="card-h"><h3>kody rabatowe</h3></header><div id="codeStats"></div></article>
+        <article class="card"><header class="card-h"><h3>miasta</h3></header><div id="cities"></div></article>
+      </div>
+    </section>
+
+    <!-- orders -->
+    <section class="view" data-v="orders">
+      <div class="toolbar">
+        <input type="search" id="oSearch" placeholder="szukaj: nr, klient, e-mail, miasto…" aria-label="szukaj zamówień">
+        <div class="seg" id="oMode"><button data-m="all" aria-pressed="true">wszystkie</button><button data-m="ona">ONA</button><button data-m="on">ON</button></div>
+      </div>
+      <div class="chips" id="oStatus"></div>
+      <div class="otable" id="oTable"></div>
+      <button class="btn ghost more" id="oMore" hidden>pokaż więcej</button>
+    </section>
+
+    <!-- codes -->
+    <section class="view" data-v="codes">
+      <div class="codes" id="codesList"></div>
+    </section>
+
+    <!-- products -->
+    <section class="view" data-v="products">
+      <div class="prods" id="prodList"></div>
+      <form class="card newprod" id="newProd">
+        <h3>nowy produkt</h3>
+        <div class="row">
+          <label class="fld">id (slug)<input name="id" required pattern="[a-z0-9-]{2,24}" placeholder="np. tee-skull"></label>
+          <label class="fld">nazwa<input name="name" required placeholder="nazwa"></label>
+          <label class="fld">cena zł<input name="price" type="number" min="1" step="0.01" required></label>
+          <label class="fld">zdjęcie (ścieżka)<input name="img" placeholder="assets/img/plik.png"></label>
+          <label class="fld chkf"><input type="checkbox" name="hasSizes" checked> rozmiary XS–XXL</label>
+        </div>
+        <button class="btn">dodaj (jako ukryty)</button>
+        <p class="muted small">Plik zdjęcia wrzuć do folderu <code>assets/img/</code>. Nowy produkt jest ukryty, dopóki go nie aktywujesz.</p>
+      </form>
+    </section>
+
+    <!-- settings -->
+    <section class="view" data-v="settings">
+      <form class="card set" id="setForm">
+        <h3>dostawa i płatności</h3>
+        <div class="row">
+          <label class="fld">darmowa dostawa od (zł)<input name="freeShipFrom" type="number" min="0" step="1"></label>
+          <label class="fld">alert niskiego stanu (szt.)<input name="lowStock" type="number" min="0" step="1"></label>
+        </div>
+        <div class="row" id="setShip"></div>
+        <div class="row" id="setPay"></div>
+        <button class="btn pri">zapisz ustawienia</button>
+      </form>
+      <div class="card set">
+        <h3>dane demo</h3>
+        <p class="muted">Wygeneruj przykładowe zamówienia z ostatnich ~45 dni, żeby zobaczyć statystyki. Nie zmieniają stanów magazynowych. Zamówienia demo mają znacznik <span class="tag">demo</span>.</p>
+        <div class="row"><label class="fld">ile<input id="demoN" type="number" value="60" min="1" max="300"></label><button class="btn" id="demoBtn" type="button">wygeneruj</button></div>
+      </div>
+      <div class="card set danger">
+        <h3>strefa śmierci</h3>
+        <p class="muted">Reset bazy usuwa wszystkie zamówienia, przywraca kody startowe i stany magazynowe. Wpisz <b>RESET</b>, aby potwierdzić.</p>
+        <div class="row"><label class="fld">potwierdzenie<input id="resetTxt" autocomplete="off" placeholder="RESET"></label><button class="btn bad" id="resetBtn" type="button" disabled>wyczyść bazę</button></div>
+      </div>
+      <div class="card set">
+        <h3>hasło i bezpieczeństwo</h3>
+        <p class="muted">Hasło ustawiasz przy starcie serwera: <code>ADMIN_PASSWORD=twojehaslo node server.mjs</code>. Domyślne hasło <code>dead12admin</code> jest tylko do testów.</p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" id="tabbar" aria-label="nawigacja"></nav>
+</div>
+
+<!-- order drawer -->
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-bg" data-dclose></div>
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+    <header class="tag-head">
+      <span class="tag-hole" aria-hidden="true"></span>
+      <div><p class="pix muted" id="dDate"></p><h3 id="dTitle"></h3></div>
+      <button class="x" data-dclose aria-label="zamknij">×</button>
+    </header>
+    <div class="drawer-body" id="dBody"></div>
+  </div>
+</aside>
+
+<!-- code editor -->
+<div class="modal" id="codeModal" hidden>
+  <div class="modal-bg" data-mclose></div>
+  <form class="modal-box card" id="codeForm">
+    <h3 id="codeTitle">nowy kod</h3>
+    <div class="row">
+      <label class="fld grow">kod<span class="inl"><input name="code" required maxlength="30" autocapitalize="characters" spellcheck="false"><button type="button" class="btn ghost" id="genCode">losuj</button></span></label>
+    </div>
+    <div class="row">
+      <label class="fld">typ<select name="type"><option value="percent">procent %</option><option value="amount">kwota zł</option><option value="ship">darmowa dostawa</option></select></label>
+      <label class="fld" id="valFld">wartość<input name="value" type="number" min="0" step="0.01"></label>
+      <label class="fld">min. zamówienie zł<input name="minOrder" type="number" min="0" step="1" value="0"></label>
+    </div>
+    <div class="row">
+      <label class="fld">limit użyć (0 = bez)<input name="limit" type="number" min="0" step="1" value="0"></label>
+      <label class="fld">strefa<select name="mode"><option value="all">obie</option><option value="ona">tylko ONA</option><option value="on">tylko ON</option></select></label>
+      <label class="fld">wygasa<input name="expires" type="date"></label>
+    </div>
+    <label class="fld">notatka<input name="note" maxlength="120"></label>
+    <label class="fld chkf"><input type="checkbox" name="active" checked> aktywny</label>
+    <p class="err" id="codeErr"></p>
+    <div class="row end"><button type="button" class="btn ghost" data-mclose>anuluj</button><button class="btn pri">zapisz kod</button></div>
+  </form>
+</div>
+
+<div class="tip" id="tip" role="tooltip"></div>
+<div class="toast" id="toast" role="status"></div>
+<div class="slip" id="slip"></div>
+
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

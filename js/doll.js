@@ -57,7 +57,7 @@ function makeStarTexture() {
 export async function createDollStage(canvas, { theme = 'ona', onPoke } = {}) {
   const gltf = await loadDoll();
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer:coarse)').matches ? 1.5 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = theme === 'ona' ? 1.15 : 1.0;

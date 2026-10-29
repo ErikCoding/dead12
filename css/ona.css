@@ -216,3 +216,53 @@
   .blister:nth-child(3n+2){margin-top:0}
   .drag-hint{display:none}
 }
+
+/* ---------- mobile polish ---------- */
+@media (hover:none){ .dollbox:hover{transform:none} .blister:hover .bl-win img{transform:none} .stk:hover{transform:rotate(var(--r))} }
+@media (max-width:1100px){
+  .ona-hero{padding-top:calc(96px + env(safe-area-inset-top));gap:30px;min-height:auto;padding-bottom:70px}
+  .stk:nth-of-type(3),.stk:nth-of-type(4){display:none}
+  .stk:nth-of-type(1){left:auto;right:6%;top:110px;--w:80px!important}
+  .stk:nth-of-type(2){left:6%;right:auto;top:110px}
+}
+@media (max-width:640px){
+  .ona-hero{padding-inline:16px}
+  .ona-hero h1 .bubble{font-size:clamp(72px,24vw,110px)}
+  .ona-hero h1 .fraktur{font-size:clamp(64px,20vw,100px);margin-left:0}
+  .ona-hero .hand{font-size:20px;margin:22px auto 26px;max-width:30ch}
+  .ona-cta{width:100%;justify-content:center;min-height:56px}
+  .dollbox{height:min(68vh,560px);min-height:480px;max-width:400px}
+  .db-top{padding-top:22px}
+  .db-top img{width:62%}
+  .stk{--w:64px!important}
+  .stk:nth-of-type(1){right:2%;top:96px;bottom:auto}
+  .stk:nth-of-type(2){right:auto;left:2%;top:96px}
+  .tape{font-size:15px;padding:10px 0}
+  .ona-shop{padding:80px 16px 70px}
+  .ona-sec-head{margin-bottom:44px}
+  .ona-sec-head h2{font-size:clamp(48px,15vw,72px)}
+  .ona-sec-head .hand{font-size:19px}
+  .blisters{gap:28px}
+  .blister{padding:52px 16px 18px}
+  .blister:nth-child(n){--tilt:0deg}
+  .bl-price{right:-4px;top:104px;width:82px;height:82px;font-size:13px}
+  .bl-name{font-size:28px}
+  .bl-open{min-height:44px;padding:12px 18px}
+  .blister.locked{min-height:0}
+  .locked-in{padding:30px 24px 60px}
+  .diary{padding:80px 14px}
+  .diary-page{padding:56px 18px 60px 52px;transform:rotate(-.8deg);box-shadow:0 20px 40px rgba(0,0,0,.6),8px 8px 0 #ff0a84}
+  .diary-holes{left:10px}
+  .diary h2{font-size:44px}
+  .diary .hand,.diary .hand.big{font-size:20px;line-height:38px}
+  .diary-heart{right:16px;top:14px;font-size:40px}
+  .polaroid{width:min(220px,80%)}
+  .grave{padding-top:90px}
+  .tomb{padding:56px 20px 70px;border-radius:200px 200px 10px 10px/160px 160px 10px 10px}
+  .sub-form{flex-direction:column}
+  .sub-form input{font-size:16px;min-height:50px}
+  .sub-form button{min-height:50px}
+  .ona-foot{padding:40px 16px calc(24px + env(safe-area-inset-bottom))}
+  .ona-foot-row{justify-content:flex-start;gap:14px 22px}
+  .ona-foot-row a{padding:6px 0}
+}

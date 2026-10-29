@@ -190,3 +190,42 @@ html[data-mode="on"] :is(.exchange,.quotes,.pm-price) .up{color:#0d6b3e}html[dat
   .ex-buy{grid-area:buy;justify-self:stretch;text-align:center}
   .ex-row:hover .ex-img{transform:none}
 }
+
+/* ---------- mobile polish ---------- */
+@media (hover:none){ .ex-row:hover{background:transparent;color:inherit} .ex-row:hover .ex-buy{background:transparent;color:inherit} .ex-row:hover .ex-img{transform:none} .on-btn:hover{transform:none} }
+@media (max-width:720px){
+  #world-on{padding-top:calc(70px + env(safe-area-inset-top))}
+  .masthead{padding:22px 16px 6px}
+  .mh-meta{font-size:10px;flex-direction:column;align-items:center;gap:3px}
+  .mh-title{font-size:clamp(52px,17vw,90px);margin:18px 0 8px}
+  .mh-title span{font-size:.34em}
+  .mh-rule b{font-size:9px;letter-spacing:.12em;text-align:center}
+  .on-front{padding:24px 16px 50px}
+  .col-lead{border-bottom:0!important;padding-bottom:0!important;margin-bottom:0!important}
+  .headline{font-size:clamp(50px,15vw,76px)}
+  .headline.sm{font-size:clamp(40px,12vw,58px);margin-bottom:22px}
+  .dek{font-size:19px}
+  .body{font-size:16px;text-align:left}
+  .on-btn{width:100%;justify-content:space-between;min-height:54px}
+  .cert{padding:20px 16px 18px;outline-offset:-12px}
+  .cert-no{display:none}
+  .cert-sign .script{font-size:26px}
+  .on-market{padding:50px 16px 60px}
+  .on-sec-head{margin-bottom:20px}
+  .ex-row{min-height:0}
+  .ex-buy{min-height:44px;display:grid;place-items:center}
+  .board{padding:60px 16px 80px;gap:56px}
+  .frame{padding:22px}
+  .frame::before{inset:20px}
+  .board blockquote{font-size:26px}
+  .cards{padding:60px 16px 50px;gap:20px}
+  .card-in input{font-size:22px}
+  .bcard-stage{padding:10px 0 20px}
+  .bcard{transform:rotateX(8deg) rotateY(-8deg) rotateZ(-2deg)}
+  .on-sub{padding:60px 16px}
+  .sub-form.on{flex-direction:column}
+  .sub-form.on input{font-size:16px;min-height:52px}
+  .sub-form.on button{min-height:52px}
+  .on-foot{padding:40px 16px calc(24px + env(safe-area-inset-bottom))}
+  .on-foot-row a{padding:6px 0}
+}

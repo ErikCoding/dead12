@@ -2,7 +2,8 @@
 <html lang="pl" data-mode="ona">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d060c">
 <title>dead12 — sklep zza grobu</title>
 <meta name="description" content="dead12 — odzież zza grobu. Strefa ONA i strefa ON.">
 <link rel="icon" href="assets/img/star-pink.png">
@@ -10,6 +11,8 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/ona.css">
 <link rel="stylesheet" href="css/on.css">
+<link rel="stylesheet" href="css/shop.css">
+<link rel="stylesheet" href="css/celebrate.css">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -40,6 +43,7 @@
   </nav>
 
   <button class="cart-btn" id="cartBtn" aria-label="Koszyk">
+    <svg class="cb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
     <span class="cb-ona">torebka</span><span class="cb-on">portfel</span>
     <b id="cartCount">0</b>
   </button>
@@ -275,41 +279,108 @@
 </div>
 
 <!-- ============ CART ============ -->
-<aside class="cart" id="cart" aria-hidden="true">
+<aside class="cart" id="cart" aria-hidden="true" aria-label="Koszyk">
   <div class="cart-bg" data-cclose></div>
-  <div class="cart-panel">
-    <header>
-      <h3><span class="cb-ona">twoja torebka</span><span class="cb-on">portfel inwestycyjny</span></h3>
+  <div class="cart-panel" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+    <header class="cart-head">
+      <h3 id="cartTitle"><span class="cb-ona">twoja torebka</span><span class="cb-on">portfel inwestycyjny</span> <small id="cartUnits"></small></h3>
       <button class="x" data-cclose aria-label="Zamknij koszyk">×</button>
     </header>
+    <div class="ship-meter" id="shipMeter">
+      <p id="shipMsg"></p>
+      <div class="sm-bar"><i id="shipBar"></i><span class="sm-end" aria-hidden="true"></span></div>
+    </div>
     <ul class="cart-list" id="cartList"></ul>
-    <footer>
-      <div class="cart-sum"><span class="cb-ona">razem</span><span class="cb-on">wartość pozycji</span><b id="cartTotal">0 zł</b></div>
+    <div class="upsell" id="upsell"></div>
+    <footer class="cart-foot">
+      <form class="code-form" id="codeForm" autocomplete="off">
+        <input id="codeInput" placeholder="kod rabatowy" aria-label="Kod rabatowy" autocapitalize="characters" spellcheck="false">
+        <button type="submit">użyj</button>
+      </form>
+      <p class="code-msg" id="codeMsg" aria-live="polite"></p>
+      <dl class="sum" id="cartSum"></dl>
       <button class="cart-go" id="checkoutBtn"><span class="cb-ona">do kasy, kochanie</span><span class="cb-on">zrealizuj transakcję</span></button>
-      <p class="cart-fine"><span class="cb-ona">darmowa dostawa trumną od 300 zł</span><span class="cb-on">prowizja maklerska: 0 zł · dostawa gratis od 300 zł</span></p>
+      <p class="cart-fine"><span class="cb-ona">zwrot 14 dni · wysyłka w 48 h · płatność blik / karta</span><span class="cb-on">zwrot 14 dni · rozliczenie T+2 · BLIK / karta / przelew</span></p>
     </footer>
   </div>
 </aside>
 
 <!-- ============ CHECKOUT ============ -->
-<div class="modal" id="coModal" hidden>
-  <div class="modal-bg" data-close></div>
-  <div class="modal-box co-box" role="dialog" aria-modal="true" aria-labelledby="coTitle">
-    <button class="x" data-close aria-label="Zamknij">×</button>
-    <form id="coForm" class="co-form">
-      <h3 id="coTitle"><span class="cb-ona">dane do wysyłki</span><span class="cb-on">formularz zlecenia</span></h3>
-      <label>imię i nazwisko<input name="n" required autocomplete="name"></label>
-      <label>e-mail<input name="e" type="email" required autocomplete="email"></label>
-      <label>adres<input name="a" required autocomplete="street-address"></label>
-      <div class="co-row"><label>kod<input name="z" required autocomplete="postal-code"></label><label>miasto<input name="c" required autocomplete="address-level2"></label></div>
-      <p class="co-total">do zapłaty: <b id="coTotal"></b></p>
-      <button type="submit" class="cart-go"><span class="cb-ona">pakuj do trumny</span><span class="cb-on">podpisz zlecenie</span></button>
-      <p class="cart-fine">wersja demo — płatności (Stripe / Przelewy24 / Shopify) do podpięcia.</p>
-    </form>
-    <div class="co-done" hidden>
-      <img src="assets/img/star-pink.png" alt="" class="cb-ona-img">
-      <h3><span class="cb-ona">zamówienie wykopane!</span><span class="cb-on">transakcja zaksięgowana.</span></h3>
-      <p id="coNo"></p>
+<div class="checkout" id="checkout" hidden>
+  <div class="co-shell" role="dialog" aria-modal="true" aria-labelledby="coTitle">
+    <header class="co-top">
+      <button class="co-back" id="coBack" aria-label="Wstecz">←</button>
+      <h3 id="coTitle"><span class="cb-ona">kasa zza grobu</span><span class="cb-on">formularz zlecenia</span></h3>
+      <ol class="co-steps" id="coSteps">
+        <li data-s="1"><b>1</b><span>dane</span></li>
+        <li data-s="2"><b>2</b><span>dostawa</span></li>
+        <li data-s="3"><b>3</b><span>płatność</span></li>
+        <li data-s="4"><b>4</b><span>podsumowanie</span></li>
+      </ol>
+      <button class="x" id="coClose" aria-label="Zamknij kasę">×</button>
+    </header>
+
+    <div class="co-body">
+      <form class="co-main" id="coForm" novalidate>
+        <!-- step 1 -->
+        <section class="co-step" data-step="1">
+          <h4><span class="cb-ona">kto odbierze trumnę?</span><span class="cb-on">dane kontrahenta</span></h4>
+          <div class="f-grid">
+            <label class="f f-2">e-mail<input name="email" type="email" autocomplete="email" inputmode="email" required><em></em></label>
+            <label class="f">imię i nazwisko<input name="name" autocomplete="name" required><em></em></label>
+            <label class="f">telefon<input name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="500 100 200" required><em></em></label>
+            <label class="f f-2">ulica i numer<input name="street" autocomplete="address-line1" required><em></em></label>
+            <label class="f f-s">kod pocztowy<input name="zip" autocomplete="postal-code" inputmode="numeric" placeholder="00-000" maxlength="6" required><em></em></label>
+            <label class="f">miasto<input name="city" autocomplete="address-level2" required><em></em></label>
+          </div>
+          <label class="chk"><input type="checkbox" name="newsletter"><span><span class="cb-ona">zapisz mnie do klubu fanek (drop 02 pierwsza)</span><span class="cb-on">chcę otrzymywać raport kwartalny (newsletter)</span></span></label>
+        </section>
+        <!-- step 2 -->
+        <section class="co-step" data-step="2">
+          <h4><span class="cb-ona">jak ma przyjechać?</span><span class="cb-on">metoda dostawy</span></h4>
+          <div class="opts" id="shipOpts"></div>
+          <label class="f locker" id="lockerBox" hidden>kod paczkomatu
+            <input name="locker" placeholder="np. GDY01M" autocapitalize="characters" spellcheck="false"><em></em>
+            <a href="https://inpost.pl/znajdz-paczkomat" target="_blank" rel="noopener">znajdź paczkomat na mapie ↗</a>
+          </label>
+          <label class="f">uwagi do zamówienia (opcjonalnie)<textarea name="note" rows="2" maxlength="500"></textarea></label>
+        </section>
+        <!-- step 3 -->
+        <section class="co-step" data-step="3">
+          <h4><span class="cb-ona">czym płacisz, kochanie?</span><span class="cb-on">instrument płatniczy</span></h4>
+          <div class="opts" id="payOpts"></div>
+          <label class="chk req"><input type="checkbox" name="terms" required><span>akceptuję <a href="#" target="_blank">regulamin</a> i <a href="#" target="_blank">politykę prywatności</a></span></label>
+          <p class="co-err" id="termsErr"></p>
+        </section>
+        <!-- step 4 -->
+        <section class="co-step" data-step="4">
+          <h4><span class="cb-ona">sprawdź, zanim pochowamy</span><span class="cb-on">weryfikacja zlecenia</span></h4>
+          <div class="review" id="review"></div>
+          <p class="co-err" id="placeErr" aria-live="assertive"></p>
+        </section>
+
+        <div class="co-actions">
+          <button type="button" class="co-next" id="coNext"></button>
+        </div>
+      </form>
+
+      <aside class="co-side" id="coSide">
+        <button type="button" class="co-side-toggle" id="coSideToggle" aria-expanded="false"><span>podsumowanie</span><b id="coSideTotal"></b></button>
+        <div class="co-side-in">
+          <ul class="co-items" id="coItems"></ul>
+          <dl class="sum" id="coSum"></dl>
+        </div>
+      </aside>
+    </div>
+
+    <div class="co-done" id="coDone" hidden>
+      <img src="assets/img/star-pink.png" alt="" class="cb-ona-img done-star">
+      <img src="assets/img/skull.png" alt="" class="cb-on-img done-skull">
+      <p class="pix done-k"><span class="cb-ona">zamówienie wykopane</span><span class="cb-on">transakcja zaksięgowana</span></p>
+      <h3 id="doneNo"></h3>
+      <p id="doneMsg"></p>
+      <div class="review" id="doneReview"></div>
+      <button class="cart-go" id="doneBack"><span class="cb-ona">wracam do trumny</span><span class="cb-on">powrót na parkiet</span></button>
     </div>
   </div>
 </div>
@@ -322,7 +393,7 @@
 
 <!-- ============ CURSOR ============ -->
 <div id="cur" aria-hidden="true"><i class="c-dot"></i><span class="c-read mono"></span></div>
-<div id="toast" role="status"></div>
+<div id="toast" role="status"><span id="toastTxt"></span><button id="toastAct" hidden></button></div>
 
 <script type="module" src="js/app.js"></script>
 </body>

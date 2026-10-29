@@ -1,42 +1,58 @@
-# dead12 — sklep (ONA / ON)
+# dead12 — sklep (ONA / ON) + panel „Kostnica”
 
-Statyczny front sklepu: HTML + CSS + JS (ES modules) + three.js z CDN.
+## Start (pełny sklep z bazą zamówień)
 
-## Uruchomienie
-
-Plik GLB i moduły JS wymagają serwera (nie zadziała przez `file://`):
+Wymaga Node 18+. Zero zależności — nic nie instalujesz.
 
 ```bash
 cd "dead12/web"
-python3 -m http.server 8012
-# albo: npx serve .
+node server.mjs                                # http://localhost:8012
+ADMIN_PASSWORD=mojetajnehaslo node server.mjs  # własne hasło admina (zalecane)
+PORT=8080 node server.mjs                      # inny port
 ```
 
-Otwórz http://localhost:8012 (strefa ON: http://localhost:8012/#on).
+- sklep: http://localhost:8012 (strefa ON: `/#on`)
+- panel admina: http://localhost:8012/admin — domyślne hasło `dead12admin` (tylko do testów!)
+- baza: `data/db.json` (tworzy się sama, jest w `.gitignore`)
+
+Tryb bez serwera: jeśli stronę wrzucisz na zwykły hosting statyczny (albo `python3 -m http.server`),
+sklep i panel przełączą się w **tryb lokalny** — dane trzymane w przeglądarce (localStorage), tylko do demo.
+Panel pokazuje w lewym dolnym rogu, w jakim trybie działa.
+
+## Co jest w środku
+
+**Koszyk:** pasek do darmowej dostawy, zmiana rozmiaru i ilości (limit = stan magazynu), kody rabatowe,
+„cofnij” po usunięciu, podpowiedź dorzucenia produktu, podsumowanie liczone przez serwer.
+
+**Kasa (4 kroki):** dane (walidacja, maska kodu pocztowego, zapamiętywanie danych) → dostawa
+(InPost z kodem paczkomatu / DPD / ekspres) → płatność (BLIK, karta, przelew, pobranie + opłata) → podsumowanie.
+Zamówienie zdejmuje stan magazynu i nalicza użycie kodu. Ceny zawsze liczy serwer — klient nie może ich podmienić.
+
+**Panel „Kostnica” (`/admin`):**
+- pulpit: przychód, zamówienia, AOV, sztuki, klienci powracający, rabaty — z porównaniem do poprzedniego okresu;
+  wykres dzienny ONA vs ON (z tabelą), bestsellery, rozmiary, płatności/dostawy, kody, miasta, alerty (do wysyłki, nieopłacone, niski stan)
+- zamówienia: wyszukiwarka, filtry statusu i strefy, szczegóły (status, tracking, notatka, historia, kopiuj adres, druk slipu), eksport CSV (Excel)
+- kody rabatowe: % / kwota / darmowa dostawa, minimum, limit użyć, strefa (ONA/ON/obie), data ważności, włącz/wyłącz
+- produkty: cena, cena przekreślona, nazwy, opisy, stan na rozmiar, ukrywanie, dodawanie nowych
+- ustawienia: próg darmowej dostawy, ceny dostaw, opłaty płatności, alert stanu, dane demo, reset bazy
+- co 15 s sprawdza nowe zamówienia i daje powiadomienie
 
 ## Struktura
 
 ```
-index.html          — cała strona: header, świat ONA, świat ON, modal, koszyk, checkout
-css/fonts.css       — czcionki self-hosted (Bagel Fat One, UnifrakturMaguntia, Mansalva,
-                      Silkscreen, Bodoni Moda, IBM Plex Mono, Pinyon Script, Grenze Gotisch)
-css/base.css        — wspólne elementy + tokeny kolorów dla obu trybów
-css/ona.css         — ONA: pudełko lalki, blistry, pamiętnik, nagrobek
-css/on.css          — ON: gazeta „The dead12 Journal”, parkiet, portret, wizytówka
-js/products.js      — KATALOG — tu dodajesz produkty (każdy ma wersję ona + on)
-js/app.js           — przełączanie trybów, koszyk (localStorage), modal, efekty, kursor
-js/doll.js          — lalka 3D (poza z kości, głowa śledzi kursor, klik = skok)
-js/coin.js          — złota moneta z czaszką wyciągniętą z logo (SVG → 3D)
-assets/model/doll.glb
-assets/img/         — wycięte z tła bluzy, loga, naklejki, skull.svg
+server.mjs         — serwer: pliki + REST API (/api/*) + data/db.json
+admin.html         — panel
+js/core.js         — wspólna logika (ceny, rabaty, stany, statystyki, CSV) — działa w Node i w przeglądarce
+js/api.js          — klient API z automatycznym trybem lokalnym
+js/cart.js         — koszyk + kasa
+js/admin.js        — panel
+js/app.js, doll.js, coin.js, products.js — sklep, 3D, katalog startowy
+css/shop.css       — koszyk + kasa · css/admin.css — panel
 ```
 
-## Nowy produkt
+## Przed produkcją
 
-Dopisz obiekt w `js/products.js` (zdjęcie PNG z przezroczystym tłem do `assets/img/`).
-Pojawi się automatycznie w obu strefach: jako blister (ONA) i jako notowanie (ON).
-
-## Co jest demo
-
-Checkout to sam formularz — pod płatności trzeba podpiąć backend
-(np. Shopify Storefront API, Stripe Checkout albo Przelewy24). Newsletter też nie wysyła danych.
+Płatności BLIK/karta są symulowane (zamówienie od razu „opłacone”). Do podpięcia: Przelewy24 / Stripe / PayU
+(w `createOrder` w `js/core.js` zamiast `status: paid` → przekierowanie do bramki + webhook).
+Maile z potwierdzeniem i integracja z InPost/DPD — do zrobienia na serwerze.
+Uruchom za HTTPS (np. Caddy/nginx) i ustaw własne `ADMIN_PASSWORD`.

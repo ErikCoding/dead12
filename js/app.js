@@ -1,5 +1,7 @@
 // dead12 — sklep. Tryby ONA / ON, koszyk, modal produktu, efekty.
-import { PRODUCTS, LOCKED, INDICES } from './products.js';
+import { PRODUCTS as SEED, LOCKED, INDICES } from './products.js';
+import * as api from './api.js';
+import { initCart } from './cart.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -8,33 +10,46 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } },
 };
-const byId = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
+// catalog comes from the API (prices, stock, active products); seed is the offline fallback
+let CATALOG = { products: SEED.map((p) => ({ ...p, stock: p.sizes ? Object.fromEntries(p.sizes.map((x) => [x, 9])) : { one: 99 } })), settings: { freeShipFrom: 300, shipping: [], payments: [], lowStock: 3 } };
+let PRODUCTS = CATALOG.products;
+let byId = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, m = mode()) => m === 'on'
   ? n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PLN'
-  : n.toLocaleString('pl-PL') + ' zł';
+  : n.toLocaleString('pl-PL', { maximumFractionDigits: 2 }) + ' zł';
+const totalStock = (p) => Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
+const lowStock = () => CATALOG.settings.lowStock || 3;
 const mode = () => html.dataset.mode;
 
 /* ============ toast ============ */
-let toastT;
-function toast(msg) {
-  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600);
+let toastT, toastFn = null;
+function toast(msg, action) {
+  const t = $('#toast'), b = $('#toastAct');
+  $('#toastTxt').textContent = msg;
+  toastFn = action?.fn || null; b.hidden = !action; if (action) b.textContent = action.label;
+  t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), action ? 5000 : 2600);
 }
+$('#toastAct').addEventListener('click', () => { toastFn && toastFn(); toastFn = null; $('#toast').classList.remove('show'); });
 
 /* ============ render: ONA blisters ============ */
 function renderOna() {
   const wrap = $('#onaProducts');
-  wrap.innerHTML = PRODUCTS.map((p) => `
-    <article class="blister" data-open="${p.id}" tabindex="0" aria-label="${p.ona.name}, ${fmt(p.price, 'ona')}">
-      <div class="bl-brand"><img src="assets/img/logo-dark.png" alt=""><span class="pix">${p.ona.kicker.split('·')[0]}</span></div>
-      <h3 class="bl-name">${p.ona.name}</h3>
-      <div class="bl-win"><img src="${p.img}" alt="${p.ona.name}" loading="lazy"></div>
-      <div class="bl-price">${p.price}<small>zł</small></div>
+  wrap.innerHTML = PRODUCTS.map((p) => {
+    const left = totalStock(p), out = left <= 0;
+    const badge = out ? '<span class="bl-badge out">wyprzedane</span>' : left <= lowStock() * 2 ? `<span class="bl-badge">ostatnie ${left} szt.</span>` : '';
+    return `
+    <article class="blister ${out ? 'sold' : ''}" data-open="${esc(p.id)}" tabindex="0" aria-label="${esc(p.ona.name)}, ${fmt(p.price, 'ona')}">
+      <div class="bl-brand"><img src="assets/img/logo-dark.png" alt=""><span class="pix">${esc((p.ona.kicker || '').split('·')[0])}</span></div>
+      <h3 class="bl-name">${esc(p.ona.name)}</h3>
+      <div class="bl-win"><img src="${esc(p.img)}" alt="${esc(p.ona.name)}" loading="lazy">${badge}</div>
+      <div class="bl-price">${p.compareAt ? `<s>${p.compareAt}</s>` : ''}${p.price}<small>zł</small></div>
       <div class="bl-foot">
-        <p class="bl-note">${p.ona.note}</p>
-        <button class="bl-open" data-open="${p.id}">rozpakuj</button>
+        <p class="bl-note">${esc(p.ona.note)}</p>
+        <button class="bl-open" data-open="${esc(p.id)}">${out ? 'zobacz' : 'rozpakuj'}</button>
       </div>
-    </article>`).join('') + `
+    </article>`; }).join('') + `
     <article class="blister locked" aria-label="Drop 02 — wkrótce">
       <div class="locked-in">
         <img src="assets/img/skull-white.png" alt="" style="width:70px">
@@ -45,7 +60,7 @@ function renderOna() {
     </article>`;
 
   // tilt + cellophane glare
-  $$('.blister:not(.locked)', wrap).forEach((el) => {
+  if (matchMedia('(hover:hover)').matches) $$('.blister:not(.locked)', wrap).forEach((el) => {
     el.addEventListener('pointermove', (e) => {
       const r = el.getBoundingClientRect();
       const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
@@ -81,16 +96,17 @@ function renderOn() {
     PRODUCTS.map((p, i) => {
       const sp = sparkPath(i * 97 + 12, p.on.chg > 0);
       const cls = p.on.chg > 0 ? 'up' : 'dn';
+      const left = totalStock(p), out = left <= 0;
       return `
-      <div class="ex-row" role="row" tabindex="0" data-open="${p.id}" aria-label="${p.on.name}, ${fmt(p.price, 'on')}">
+      <div class="ex-row ${out ? 'sold' : ''}" role="row" tabindex="0" data-open="${esc(p.id)}" aria-label="${esc(p.on.name)}, ${fmt(p.price, 'on')}">
         <span class="ex-n mono">0${i + 1}</span>
-        <span class="ex-t">${p.on.ticker}</span>
-        <img class="ex-img" src="${p.img}" alt="${p.on.name}" loading="lazy">
-        <span class="ex-name">${p.on.name}<em>${p.on.sub}</em></span>
+        <span class="ex-t">${esc(p.on.ticker)}${out ? '<small class="ex-halt">zawieszony</small>' : left <= lowStock() * 2 ? `<small class="ex-halt low">wolumen: ${left}</small>` : ''}</span>
+        <img class="ex-img" src="${esc(p.img)}" alt="${esc(p.on.name)}" loading="lazy">
+        <span class="ex-name">${esc(p.on.name)}<em>${esc(p.on.sub)}</em></span>
         <svg class="ex-spark ${cls}" viewBox="0 0 200 54" preserveAspectRatio="none"><path class="area" d="${sp.area}"/><path d="${sp.d}"/></svg>
-        <span class="ex-price">${fmt(p.price, 'on')}</span>
+        <span class="ex-price">${p.compareAt ? `<s>${fmt(p.compareAt, 'on')}</s>` : ''}${fmt(p.price, 'on')}</span>
         <span class="ex-chg ${cls}">${p.on.chg > 0 ? '▲' : '▼'} ${Math.abs(p.on.chg).toFixed(1)}%</span>
-        <button class="ex-buy" data-open="${p.id}">kup · long</button>
+        <button class="ex-buy" data-open="${esc(p.id)}">${out ? 'podgląd' : 'kup · long'}</button>
       </div>`;
     }).join('') + `
       <div class="ex-row locked" role="row">
@@ -106,10 +122,12 @@ function renderOn() {
 }
 
 /* ============ ticker + quotes (ON) ============ */
-const quotes = [
+let quotes = [];
+const buildQuotes = () => (quotes = [
   ...PRODUCTS.map((p) => ({ t: p.on.ticker, v: p.price, c: p.on.chg })),
   ...INDICES.map(([t, v]) => ({ t, v, c: (Math.random() - 0.4) * 6 })),
-];
+]);
+buildQuotes();
 const hist = Array.from({ length: 60 }, (_, i) => 100 + Math.sin(i / 5) * 8 + i * 0.6 + Math.random() * 4);
 function qfmt(v) { return v < 1 ? v.toFixed(3) : v.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function renderTicker() {
@@ -150,49 +168,9 @@ function countdowns() {
   });
 }
 
-/* ============ cart ============ */
-let cart = store.get('dead12-cart', []);
-function saveCart() { store.set('dead12-cart', cart); renderCart(); }
-function addToCart(id, size) {
-  const key = id + '|' + (size || '-');
-  const line = cart.find((l) => l.key === key);
-  if (line) line.q++; else cart.push({ key, id, size, q: 1 });
-  saveCart();
-  const b = $('#cartBtn'); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump');
-}
-function cartTotal() { return cart.reduce((s, l) => s + (byId[l.id]?.price || 0) * l.q, 0); }
-function renderCart() {
-  cart = cart.filter((l) => byId[l.id]);
-  $('#cartCount').textContent = cart.reduce((s, l) => s + l.q, 0);
-  const m = mode(), list = $('#cartList');
-  if (!cart.length) {
-    list.innerHTML = `<li class="cart-empty" style="display:block;border:0">${m === 'ona'
-      ? '<img src="assets/img/skull-white.png" alt="">pusto jak w trumnie po zmartwychwstaniu.'
-      : '<img src="assets/img/skull.png" alt="">brak otwartych pozycji.'}</li>`;
-  } else {
-    list.innerHTML = cart.map((l) => {
-      const p = byId[l.id];
-      return `<li data-key="${l.key}">
-        <img src="${p.img}" alt="">
-        <div><div class="ci-n">${m === 'ona' ? p.ona.name : p.on.name}</div>
-          <div class="ci-m">${m === 'on' ? p.on.ticker + ' · ' : ''}${l.size ? 'rozmiar ' + l.size : 'one size'}</div>
-          <div class="ci-q"><button data-q="-1" aria-label="mniej">−</button><span>${l.q}</span><button data-q="1" aria-label="więcej">+</button></div></div>
-        <div class="ci-p">${fmt(p.price * l.q)}<button class="ci-rm" data-rm>${m === 'ona' ? 'pochowaj' : 'sprzedaj'}</button></div>
-      </li>`;
-    }).join('');
-  }
-  $('#cartTotal').textContent = fmt(cartTotal());
-  $('#checkoutBtn').disabled = !cart.length;
-}
-function openCart(v = true) { $('#cart').classList.toggle('open', v); $('#cart').setAttribute('aria-hidden', String(!v)); }
-$('#cartBtn').addEventListener('click', () => openCart(true));
-$$('[data-cclose]').forEach((el) => el.addEventListener('click', () => openCart(false)));
-$('#cartList').addEventListener('click', (e) => {
-  const li = e.target.closest('li[data-key]'); if (!li) return;
-  const line = cart.find((l) => l.key === li.dataset.key);
-  if (e.target.dataset.q) { line.q += +e.target.dataset.q; if (line.q < 1) cart = cart.filter((l) => l !== line); saveCart(); }
-  if (e.target.hasAttribute('data-rm')) { cart = cart.filter((l) => l !== line); saveCart(); }
-});
+/* ============ cart (js/cart.js) ============ */
+const cart = initCart({ getMode: () => mode(), fmt: (n) => fmt(n), toast, catalog: () => CATALOG });
+const openCart = cart.open;
 
 /* ============ product modal ============ */
 let current = null, chosen = null;
@@ -205,51 +183,47 @@ function openProduct(id) {
   $('#pmName').textContent = d.name;
   $('#pmPrice').innerHTML = m === 'ona' ? fmt(p.price) : `${fmt(p.price)} <span class="${d.chg > 0 ? 'up' : 'dn'}" style="font-size:.7em">${d.chg > 0 ? '▲' : '▼'} ${Math.abs(d.chg)}%</span>`;
   $('#pmDesc').textContent = d.desc;
-  $('#pmSizes').innerHTML = p.sizes ? p.sizes.map((s) => `<button aria-pressed="false" data-size="${s}">${s}</button>`).join('') : '';
+  $('#pmPrice').insertAdjacentHTML('afterbegin', p.compareAt ? `<s class="pm-was">${fmt(p.compareAt)}</s> ` : '');
+  $('#pmSizes').innerHTML = p.sizes ? p.sizes.map((s) => {
+    const left = p.stock?.[s] ?? 0;
+    return `<button aria-pressed="false" data-size="${s}" ${left <= 0 ? 'disabled aria-disabled="true" title="brak"' : ''}>${s}${left > 0 && left <= lowStock() ? `<i>${left}</i>` : ''}</button>`;
+  }).join('') + `<span class="pm-stock" id="pmStock"></span>` : '';
+  if (!p.sizes && (p.stock?.one ?? 0) <= 0) chosen = null;
   updateAdd();
   $('#pmFine').textContent = m === 'ona' ? 'darmowy zwrot do 14 dni · wysyłka w 48 h · pakowane w różową trumnę' : 'rozliczenie T+2 · darmowy zwrot 14 dni · ryzyko inwestycyjne: wygląd';
-  $('#pModal').hidden = false; $('#pmAdd').focus({ preventScroll: true });
+  $('#pModal').hidden = false; document.body.classList.add('lock'); $('#pmAdd').focus({ preventScroll: true });
 }
 function updateAdd() {
   const m = mode(), btn = $('#pmAdd');
-  btn.disabled = !chosen;
-  btn.textContent = !chosen ? (m === 'ona' ? 'wybierz rozmiar, kochanie' : 'wybierz wolumen (rozmiar)')
-    : (m === 'ona' ? 'wrzuć do torebki ♥' : 'otwórz pozycję · long');
+  const sold = current && totalStock(current) <= 0;
+  btn.disabled = !chosen || sold;
+  btn.textContent = sold ? (m === 'ona' ? 'wyprzedane — wróci w drop 02' : 'obrót zawieszony (brak wolumenu)')
+    : !chosen ? (m === 'ona' ? 'wybierz rozmiar, kochanie' : 'wybierz wolumen (rozmiar)')
+      : (m === 'ona' ? 'wrzuć do torebki ♥' : 'otwórz pozycję · long');
+  const ps = $('#pmStock');
+  if (ps && chosen && current) { const l = current.stock?.[chosen] ?? 0; ps.textContent = l <= lowStock() ? (m === 'ona' ? `zostały ${l} szt.!` : `wolumen: ${l} szt.`) : ''; }
 }
 $('#pmSizes').addEventListener('click', (e) => {
   const b = e.target.closest('[data-size]'); if (!b) return;
+  if (b.disabled) return;
   $$('#pmSizes button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
   chosen = b.dataset.size; updateAdd();
 });
 $('#pmAdd').addEventListener('click', () => {
   if (!current || !chosen) return;
-  addToCart(current.id, chosen === 'one' ? null : chosen);
+  cart.add(current.id, chosen === 'one' ? null : chosen);
   closeModals();
-  toast(mode() === 'ona' ? `♥ ${current.ona.name} już w torebce` : `zlecenie przyjęte: ${current.on.ticker} ×1`);
+  toast(mode() === 'ona' ? `♥ ${current.ona.name} już w torebce` : `zlecenie przyjęte: ${current.on.ticker} ×1`, { label: 'zobacz', fn: () => openCart(true) });
 });
-function closeModals() { $$('.modal').forEach((m) => (m.hidden = true)); }
+function closeModals() { $$('.modal').forEach((m) => (m.hidden = true)); document.body.classList.remove('lock'); }
+window.addEventListener('d12:open', (e) => openProduct(e.detail));
 $$('[data-close]').forEach((el) => el.addEventListener('click', closeModals));
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModals(); openCart(false); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !cart.isOpen()) { closeModals(); openCart(false); } });
 document.addEventListener('click', (e) => {
   const o = e.target.closest('[data-open]'); if (o) openProduct(o.dataset.open);
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.matches('[data-open]')) openProduct(e.target.dataset.open);
-});
-
-/* ============ checkout ============ */
-$('#checkoutBtn').addEventListener('click', () => {
-  openCart(false);
-  $('#coTotal').textContent = fmt(cartTotal());
-  $('#coForm').hidden = false; $('.co-done').hidden = true;
-  $('#coModal').hidden = false;
-});
-$('#coForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const no = 'D12-' + Math.floor(Math.random() * 900000 + 100000);
-  $('#coNo').textContent = mode() === 'ona' ? `numer trumny: ${no}. potwierdzenie przyleci nietoperzem (i mailem).` : `numer zlecenia: ${no}. potwierdzenie wysłano na e-mail.`;
-  $('#coForm').hidden = true; $('.co-done').hidden = false;
-  cart = []; saveCart();
 });
 
 /* ============ subscribe ============ */
@@ -378,8 +352,9 @@ function applyMode(m) {
   document.title = m === 'ona' ? 'dead12 — ONA · pokaz zza grobu' : 'dead12 — ON · The dead12 Journal';
   $('link[rel=icon]').href = m === 'ona' ? 'assets/img/star-pink.png' : 'assets/img/skull.png';
   store.set('dead12-mode', m);
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', m === 'ona' ? '#0d060c' : '#efe1cd');
   history.replaceState(null, '', '#' + m);
-  renderCart();
+  window.dispatchEvent(new Event('d12:mode'));
   if (m === 'on') { renderTicker(); renderBigChart(); bootOn3D(); }
   set3DActive();
 }
@@ -414,7 +389,15 @@ const topEl = $('#top');
 addEventListener('scroll', () => topEl.classList.toggle('scrolled', scrollY > 40), { passive: true });
 
 /* ============ init ============ */
-renderOna(); renderOn(); renderTicker(); renderBigChart(); countdowns();
+function renderShop() { PRODUCTS = CATALOG.products; byId = Object.fromEntries(PRODUCTS.map((p) => [p.id, p])); renderOna(); renderOn(); }
+async function loadCatalog() {
+  try { CATALOG = await api.getCatalog(); renderShop(); buildQuotes(); renderTicker(); cart.refresh(); }
+  catch (e) { console.warn('catalog failed, using seed', e); }
+}
+// refresh stock after an order and when the tab comes back
+window.addEventListener('d12:ordered', loadCatalog);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadCatalog(); });
+renderShop(); renderTicker(); renderBigChart(); countdowns(); loadCatalog();
 setInterval(countdowns, 1000); setInterval(tickMarket, 1800);
 const initial = (location.hash.slice(1) === 'on' || location.hash.slice(1) === 'ona') ? location.hash.slice(1) : store.get('dead12-mode', 'ona');
 applyMode(initial);
